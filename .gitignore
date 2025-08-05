@@ -1,0 +1,176 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment variables and secrets
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+*.env
+
+# Database
+*.db
+*.sqlite3
+*.sqlite
+database.url
+
+# Logs
+*.log
+logs/
+log/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# FastAPI specific
+.pytest_cache/
+instance/
+.webassets-cache
+
+# SQLAlchemy
+alembic/versions/*.py
+!alembic/versions/.gitkeep
+
+# Docker
+docker-compose.override.yml
+docker-compose.prod.yml
+docker-compose.local.yml
+
+# IDE / Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Certificates and keys
+*.pem
+*.key
+*.cert
+*.crt
+certificates/
+ssl/
+
+# Secrets and configurations
+secrets/
+config/local/
+config/production/
+config/development/
+
+# Monitoring data
+prometheus_data/
+grafana_data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Backup files
+*.bak
+*.backup
+backup/
+
+# AWS / Cloud
+.aws/
+aws-credentials
+gcp-credentials.json
+azure-credentials
+
+# Docker secrets
+docker/secrets/
+.dockerignore.local
+
+# GitHub Actions
+.github/artifacts/
+.github/cache/
+.github/temp/
+
+# Railway deployment
+railway.json
+.railway/
+railway.toml
+.railway.env
+deployment/
+deploy.log
+*.deploy
+
+# PostgreSQL
+*.sql.gz
+*.dump
+*.backup
+
+# Redis
+redis.conf.local
+redis-data/
+
+# RabbitMQ
+rabbitmq-data/
+rabbitmq.conf.local
