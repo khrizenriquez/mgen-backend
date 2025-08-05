@@ -174,3 +174,81 @@ redis-data/
 # RabbitMQ
 rabbitmq-data/
 rabbitmq.conf.local
+
+# Python Package Managers
+poetry.lock
+Pipfile.lock
+pdm.lock
+pyproject.toml.bak
+
+# Development tools
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile
+Pipfile.lock
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Machine Learning
+*.model
+*.pkl
+*.joblib
+models/
+checkpoints/
+
+# Data files
+data/
+datasets/
+*.csv
+*.json
+*.xml
+*.xlsx
+*.parquet
+
+# API Documentation
+docs/_build/
+site/
+
+# Profiling
+.prof
+
+# Kubernetes
+*.yaml.bak
+k8s-secrets/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# Ansible
+*.retry
+
+# Monitoring specific
+alertmanager_data/
+loki_data/
+tempo_data/
+
+# Load testing
+*.jmx
+results/
