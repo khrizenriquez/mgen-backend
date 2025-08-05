@@ -1,6 +1,6 @@
 # mgen-backend
 
-Sistema de gestión de donaciones - Backend API con arquitectura hexagonal.
+Sistema de gestión de donaciones - 
 
 ## 🚀 Inicio Rápido
 
