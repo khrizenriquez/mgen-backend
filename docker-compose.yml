@@ -9,12 +9,10 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/donations_db
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
-      - REDIS_URL=redis://redis:6379/0
       - ENVIRONMENT=development
     depends_on:
       - db
       - rabbitmq
-      - redis
     volumes:
       - .:/app
     networks:
@@ -52,16 +50,6 @@ services:
       - donations-network
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    container_name: donations-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - donations-network
-    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
@@ -99,16 +87,32 @@ services:
       - donations-network
     restart: unless-stopped
 
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: donations-pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@duku.dev}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:-admin123}
+    ports:
+      - "5050:80"
+    depends_on:
+      - db
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - donations-network
+    restart: unless-stopped
+
 volumes:
   pgdata:
     driver: local
   rabbitmq_data:
     driver: local
-  redis_data:
-    driver: local
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  pgadmin_data:
     driver: local
 
 networks:

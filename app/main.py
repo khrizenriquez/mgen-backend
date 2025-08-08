@@ -13,6 +13,8 @@ import os
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
 from app.infrastructure.database.database import engine, Base
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -63,14 +65,30 @@ async def add_process_time_header(request, call_next):
 # Create database tables
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database on startup"""
-    try:
-        # Create all tables
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database tables created successfully")
-    except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
-        raise
+    """Initialize database on startup with retry until DB is ready"""
+    max_retries = int(os.getenv("DB_STARTUP_MAX_RETRIES", "30"))
+    wait_seconds = float(os.getenv("DB_STARTUP_WAIT_SECONDS", "2"))
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            # Create all tables
+            Base.metadata.create_all(bind=engine)
+            logger.info("Database connected and tables ensured")
+            break
+        except OperationalError as e:
+            logger.warning(
+                f"Database not ready (attempt {attempt}/{max_retries}): {e}. "
+                f"Retrying in {wait_seconds}s..."
+            )
+            time.sleep(wait_seconds)
+        except Exception as e:
+            logger.error(f"Unexpected error ensuring database: {e}")
+            raise
+    else:
+        # Exhausted retries
+        raise RuntimeError("Database not ready after retries. Startup aborted.")
 
 @app.on_event("shutdown")
 async def shutdown_event():

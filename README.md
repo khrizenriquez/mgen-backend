@@ -33,9 +33,19 @@ docker-compose down
 | **PostgreSQL** | `5432` | localhost:5432 | Base de datos |
 | **RabbitMQ Management** | `15672` | http://localhost:15672 | UI de gestión (guest/guest) |
 | **RabbitMQ AMQP** | `5672` | localhost:5672 | Broker de mensajes |
-| **Redis** | `6379` | localhost:6379 | Cache y sesiones |
 | **Prometheus** | `9090` | http://localhost:9090 | Métricas |
 | **Grafana** | `3000` | http://localhost:3000 | Dashboards (admin/admin) |
+| **pgAdmin** | `5050` | http://localhost:5050 | Admin Postgres (admin@duku.dev/admin123) |
+
+## 🔐 Credenciales por defecto
+
+- **PostgreSQL**: `postgres / postgres` (definidas en `docker-compose.yml`)
+- **RabbitMQ (UI)**: `guest / guest` (Management en `http://localhost:15672`)
+- **Grafana**: `admin / admin` (cambiables vía variables `GF_SECURITY_ADMIN_*`)
+- **Prometheus**: sin autenticación por defecto (`http://localhost:9090`)
+- **pgAdmin**: `admin@duku.dev / admin123` (configurable via `.env`)
+
+Nota: Cambia estas credenciales en producción mediante variables de entorno o secrets.
 
 ## 🔗 Enlaces Útiles
 
@@ -55,6 +65,16 @@ alembic upgrade head
 
 # Desarrollo local (sin Docker)
 uvicorn app.main:app --reload --port 8000
+```
+
+### Herramientas locales
+
+Acceso a pgAdmin:
+
+```
+http://localhost:5050
+Email: admin@duku.dev
+Password: admin123
 ```
 
 ## 🏗️ Arquitectura
