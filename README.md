@@ -11,7 +11,7 @@ Sistema de gestión de donaciones -
 ### Levantar los contenedores
 
 ```bash
-# Clonar el repositorio (si no lo has hecho)
+# Clonar el repositorio
 git clone <repository-url>
 cd mgen-backend
 
