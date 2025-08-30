@@ -69,13 +69,30 @@ uvicorn app.main:app --reload --port 8000
 
 ### Herramientas locales
 
-Acceso a pgAdmin:
+#### Acceso a pgAdmin (Desarrollo Local)
+
+**URL**: http://localhost:5050
+- **Email**: `admin@duku.dev`
+- **Password**: `admin123`
+
+#### Configuración de conexión PostgreSQL en pgAdmin
+
+Para conectar pgAdmin al servidor PostgreSQL dentro de Docker:
 
 ```
-http://localhost:5050
-Email: admin@duku.dev
-Password: admin123
+General Tab:
+└── Name: Donations Database Server
+
+Connection Tab:
+├── Host name/address: db                    # Nombre del servicio Docker
+├── Port: 5432
+├── Maintenance database: postgres
+├── Username: postgres                       # Usuario de desarrollo
+├── Password: postgres                       # Contraseña de desarrollo
+└── Save password: ✅ (recomendado)
 ```
+
+**Nota**: Estos son valores de desarrollo. En producción las credenciales se gestionarán via secrets (Railway/Render).
 
 ## 🏗️ Arquitectura
 

@@ -69,6 +69,9 @@ venv.bak/
 *.sqlite
 database.url
 
+# SQL files (schemas, backups, etc.)
+*.sql
+
 # Logs
 *.log
 logs/
