@@ -25,7 +25,7 @@ Required services for full functionality:
 Configure services via environment variables in [docker-compose.yml](mdc:docker-compose.yml):
 ```yaml
 environment:
-  - DATABASE_URL=postgresql://postgres:postgres@db:5432/donations_db
+  - DATABASE_URL=${DATABASE_URL}
   - SERVICE_NAME=donations-api
   - VERSION=1.0.0
   - LOG_LEVEL=INFO
@@ -57,7 +57,7 @@ logging:
 - Example for database:
 ```yaml
 healthcheck:
-  test: ["CMD-SHELL", "pg_isready -U postgres -d donations_db"]
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
   interval: 10s
   timeout: 5s
   retries: 5
