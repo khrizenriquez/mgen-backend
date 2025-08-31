@@ -143,6 +143,7 @@ services:
     networks:
       - donations-network
     restart: unless-stopped
+    user: "0:0"  # Run as root to fix permission issues
 
   promtail:
     image: grafana/promtail:2.9.0
