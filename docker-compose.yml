@@ -143,8 +143,10 @@ services:
     networks:
       - donations-network
     restart: unless-stopped
-    user: "0:0"
-
+    user: "10001:10001"  # Non-root user for security
+    environment:
+      - LOKI_USER_ID=10001
+      - LOKI_GROUP_ID=10001
   promtail:
     image: grafana/promtail:2.9.0
     container_name: donations-promtail
