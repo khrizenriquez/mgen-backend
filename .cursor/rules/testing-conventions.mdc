@@ -1,0 +1,102 @@
+---
+globs: test_*.py,*_test.py
+description: Testing conventions and practices for the donation management system
+---
+
+# Testing Conventions
+
+## Test Organization
+Follow the test structure in [tests/](mdc:tests/):
+```
+tests/
+├── unit/                    # Unit tests (fast, isolated)
+│   ├── domain/             # Domain entity tests
+│   ├── adapters/           # Controller tests
+│   └── infrastructure/     # Infrastructure tests
+├── integration/            # Integration tests (with database)
+│   ├── adapters/           # API endpoint tests
+│   └── infrastructure/     # Database integration tests
+└── conftest.py             # Shared test configuration
+```
+
+## Test Configuration
+- Use pytest configuration from [pytest.ini](mdc:pytest.ini)
+- Shared fixtures in [conftest.py](mdc:conftest.py)
+- Run tests in Docker: `docker-compose exec api pytest`
+
+## Unit Testing Guidelines
+- Test domain entities for business logic validation
+- Mock external dependencies (database, APIs)
+- Test logging formatters and PII masking
+- Example from [tests/unit/infrastructure/logging/test_formatters.py](mdc:tests/unit/infrastructure/logging/test_formatters.py)
+
+## Integration Testing
+- Test API endpoints with real database
+- Use TestClient for FastAPI testing
+- Verify logging middleware and correlation IDs
+- Example from [tests/integration/infrastructure/logging/test_middleware.py](mdc:tests/integration/infrastructure/logging/test_middleware.py)
+
+## Testing Structure
+```python
+class TestDonationEntity:
+    """Test cases for Donation entity business logic"""
+    
+    def setup_method(self):
+        """Setup for each test method"""
+        self.donation_data = {...}
+    
+    def test_validation_success(self):
+        """Test successful validation"""
+        # Arrange, Act, Assert pattern
+    
+    def test_validation_failure(self):
+        """Test validation failures"""
+        with pytest.raises(ValueError, match="expected error"):
+            # Test code
+```
+
+## Mocking Guidelines
+- Mock external dependencies at the boundary
+- Use `unittest.mock.Mock` and `patch` decorators
+- Mock logging calls to verify structured logging
+- Mock database calls in unit tests
+
+## Assertion Patterns
+- Use descriptive assertion messages
+- Verify exception types and messages
+- Check log output format and fields
+- Validate HTTP status codes and response structure
+
+## Test Data
+- Use realistic but non-sensitive test data
+- Create reusable fixtures for common entities
+- Use UUID4 for test IDs
+- Follow real schema constraints
+
+## Integration Test Setup
+```python
+@pytest.fixture
+def app_with_logging():
+    """Create FastAPI app with logging middleware for testing"""
+    setup_logging()
+    app = FastAPI()
+    app.add_middleware(LoggingMiddleware)
+    return app
+
+@pytest.fixture  
+def client(app_with_logging):
+    """Create test client"""
+    return TestClient(app_with_logging)
+```
+
+## Running Tests
+- Unit tests: `pytest tests/unit/ -v`
+- Integration tests: `pytest tests/integration/ -v`
+- All tests: `pytest -v`
+- With coverage: `pytest --cov=app --cov-report=html`
+
+## Test Coverage
+- Aim for high coverage of business logic
+- Focus on critical paths and error conditions
+- Include edge cases and validation scenarios
+- Test logging output and correlation IDs

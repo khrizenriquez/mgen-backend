@@ -44,3 +44,4 @@ def test_database_tables_creation(db_session: Session):
     
     # Nota: Este test pasará cuando tengas los modelos SQLAlchemy creados
     # Por ahora solo validamos que la configuración funciona
+

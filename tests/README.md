@@ -206,3 +206,4 @@ open htmlcov/index.html
 ---
 
 **Configuración completa y lista para usar.** 🎉
+

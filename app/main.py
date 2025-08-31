@@ -1,7 +1,7 @@
 """
 Main FastAPI application with hexagonal architecture
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
@@ -9,16 +9,18 @@ from starlette.responses import Response
 import time
 import logging
 import os
+import structlog
 
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
 from app.infrastructure.database.database import engine, Base
+from app.infrastructure.logging import setup_logging, get_logger, LoggingMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Setup structured logging
+setup_logging()
+logger = get_logger(__name__)
 
 # Prometheus metrics
 REQUEST_COUNT = Counter('donations_requests_total', 'Total requests', ['method', 'endpoint'])
@@ -32,6 +34,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Add logging middleware first (before CORS)
+app.add_middleware(LoggingMiddleware)
 
 # CORS middleware
 app.add_middleware(
@@ -119,12 +124,36 @@ async def root():
 
 # Global exception handler
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    """Global exception handler"""
-    logger.error(f"Global exception: {exc}")
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler with structured logging"""
+    # Get request ID from headers if available
+    request_id = request.headers.get("x-request-id", "unknown")
+    
+    # Log the exception with context
+    logger.error(
+        "Unhandled exception occurred",
+        error=str(exc),
+        error_type=type(exc).__name__,
+        method=request.method,
+        path=request.url.path,
+        request_id=request_id,
+        exc_info=True
+    )
+    
+    # Return error response (don't expose internal details in production)
+    if os.getenv("ENVIRONMENT", "development") == "development":
+        detail = str(exc)
+    else:
+        detail = "An internal error occurred"
+    
     return JSONResponse(
         status_code=500,
-        content={"message": "Internal server error", "detail": str(exc)}
+        content={
+            "message": "Internal server error", 
+            "detail": detail,
+            "request_id": request_id
+        },
+        headers={"x-request-id": request_id}
     )
 
 if __name__ == "__main__":
@@ -134,5 +163,8 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=8000, 
         reload=True,
-        log_level="info"
+        log_level=os.getenv("LOG_LEVEL", "info").lower(),
+        access_log=True,
+        use_colors=False,  # Disable colors for better JSON logging
+        log_config=None   # Use our custom logging config
     )

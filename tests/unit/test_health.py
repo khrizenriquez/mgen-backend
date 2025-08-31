@@ -35,3 +35,4 @@ def test_sample_user_fixture(sample_user_data):
     assert "password" in sample_user_data
     assert sample_user_data["email"] == "testuser@example.com"
     assert sample_user_data["is_active"] is True
+

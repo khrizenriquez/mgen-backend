@@ -1,0 +1,53 @@
+---
+alwaysApply: true
+description: Structured logging standards and practices for the donation management system
+---
+
+# Structured Logging Standards
+
+## Required Logging Setup
+- Always use structured logging with JSON format in production
+- Use the centralized logging configuration from [app/infrastructure/logging](mdc:app/infrastructure/logging)
+- Import logger using: `from app.infrastructure.logging import get_logger`
+- Initialize logger: `logger = get_logger(__name__)`
+
+## Logging Format Requirements
+- All logs must include these standard fields:
+  - `timestamp`: ISO format timestamp
+  - `level`: Log level (INFO, ERROR, WARNING, DEBUG)
+  - `service`: Always "donations-api"
+  - `env`: Environment (development, staging, production)
+  - `version`: Application version
+  - `request_id`: Correlation ID for request tracing
+  - `method`, `path`, `status_code`, `latency_ms`: For HTTP requests
+
+## Request Correlation
+- Every HTTP request must have a unique `request_id` (UUID)
+- Use the LoggingMiddleware from [app/infrastructure/logging/middleware.py](mdc:app/infrastructure/logging/middleware.py)
+- Add correlation IDs to response headers: `x-request-id`
+
+## PII Masking
+- Automatically mask sensitive data using PIIMasker from [app/infrastructure/logging/formatters.py](mdc:app/infrastructure/logging/formatters.py)
+- Never log passwords, tokens, or full credit card numbers
+- Email masking: `user@example.com` → `us***@example.com`
+- Phone masking: `555-123-4567` → `***-***-****`
+
+## Error Logging
+- Always log errors with context using structured format:
+```python
+logger.error(
+    "Operation failed",
+    error=str(e),
+    error_type=type(e).__name__,
+    user_id=user_id,
+    operation="create_donation",
+    exc_info=True
+)
+```
+
+## Environment Variables
+- Control logging via environment variables:
+  - `LOG_LEVEL`: DEBUG, INFO, WARNING, ERROR
+  - `SERVICE_NAME`: Service identifier
+  - `ENVIRONMENT`: Environment name
+  - `VERSION`: Application version
