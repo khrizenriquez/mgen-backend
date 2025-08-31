@@ -4,10 +4,11 @@ SQLAlchemy implementation of donation repository
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
+from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.domain.entities.donation import Donation, DonationStatus, DonationType
+from app.domain.entities.donation import Donation, DonationStatus
 from app.domain.repositories.donation_repository import DonationRepository
 from app.infrastructure.database.models import DonationModel
 
@@ -24,32 +25,36 @@ class SQLAlchemyDonationRepository(DonationRepository):
         """Convert SQLAlchemy model to domain entity"""
         return Donation(
             id=model.id,
-            donor_name=model.donor_name,
+            amount_gtq=model.amount_gtq,
+            status_id=model.status_id,
             donor_email=model.donor_email,
-            amount=model.amount,
-            currency=model.currency,
-            donation_type=model.donation_type,
-            status=model.status,
-            description=model.description,
+            donor_name=model.donor_name,
+            donor_nit=model.donor_nit,
+            user_id=model.user_id,
+            payu_order_id=model.payu_order_id,
+            reference_code=model.reference_code,
+            correlation_id=model.correlation_id,
             created_at=model.created_at,
             updated_at=model.updated_at,
-            completed_at=model.completed_at
+            paid_at=model.paid_at
         )
     
     def _entity_to_model(self, donation: Donation) -> DonationModel:
         """Convert domain entity to SQLAlchemy model"""
         return DonationModel(
             id=donation.id,
-            donor_name=donation.donor_name,
+            amount_gtq=donation.amount_gtq,
+            status_id=donation.status_id,
             donor_email=donation.donor_email,
-            amount=donation.amount,
-            currency=donation.currency,
-            donation_type=donation.donation_type,
-            status=donation.status,
-            description=donation.description,
+            donor_name=donation.donor_name,
+            donor_nit=donation.donor_nit,
+            user_id=donation.user_id,
+            payu_order_id=donation.payu_order_id,
+            reference_code=donation.reference_code,
+            correlation_id=donation.correlation_id,
             created_at=donation.created_at,
             updated_at=donation.updated_at,
-            completed_at=donation.completed_at
+            paid_at=donation.paid_at
         )
     
     async def create(self, donation: Donation) -> Donation:
@@ -63,7 +68,7 @@ class SQLAlchemyDonationRepository(DonationRepository):
         
         return self._model_to_entity(model)
     
-    async def get_by_id(self, donation_id: int) -> Optional[Donation]:
+    async def get_by_id(self, donation_id: UUID) -> Optional[Donation]:
         """Get donation by ID"""
         model = self.db.query(DonationModel).filter(
             DonationModel.id == donation_id
@@ -85,17 +90,13 @@ class SQLAlchemyDonationRepository(DonationRepository):
         self, 
         limit: int = 100, 
         offset: int = 0,
-        status: Optional[DonationStatus] = None,
-        donation_type: Optional[DonationType] = None
+        status: Optional[DonationStatus] = None
     ) -> List[Donation]:
         """Get all donations with optional filtering"""
         query = self.db.query(DonationModel)
         
         if status:
-            query = query.filter(DonationModel.status == status)
-        
-        if donation_type:
-            query = query.filter(DonationModel.donation_type == donation_type)
+            query = query.filter(DonationModel.status_id == status.value)
         
         models = query.order_by(
             DonationModel.created_at.desc()
@@ -113,22 +114,24 @@ class SQLAlchemyDonationRepository(DonationRepository):
             raise ValueError(f"Donation with ID {donation.id} not found")
         
         # Update fields
-        model.donor_name = donation.donor_name
+        model.amount_gtq = donation.amount_gtq
+        model.status_id = donation.status_id
         model.donor_email = donation.donor_email
-        model.amount = donation.amount
-        model.currency = donation.currency
-        model.donation_type = donation.donation_type
-        model.status = donation.status
-        model.description = donation.description
+        model.donor_name = donation.donor_name
+        model.donor_nit = donation.donor_nit
+        model.user_id = donation.user_id
+        model.payu_order_id = donation.payu_order_id
+        model.reference_code = donation.reference_code
+        model.correlation_id = donation.correlation_id
         model.updated_at = donation.updated_at
-        model.completed_at = donation.completed_at
+        model.paid_at = donation.paid_at
         
         self.db.commit()
         self.db.refresh(model)
         
         return self._model_to_entity(model)
     
-    async def delete(self, donation_id: int) -> bool:
+    async def delete(self, donation_id: UUID) -> bool:
         """Delete a donation"""
         model = self.db.query(DonationModel).filter(
             DonationModel.id == donation_id
@@ -144,8 +147,8 @@ class SQLAlchemyDonationRepository(DonationRepository):
     async def get_total_amount_by_status(self, status: DonationStatus) -> Decimal:
         """Get total amount for donations with specific status"""
         result = self.db.query(
-            func.coalesce(func.sum(DonationModel.amount), 0)
-        ).filter(DonationModel.status == status).scalar()
+            func.coalesce(func.sum(DonationModel.amount_gtq), 0)
+        ).filter(DonationModel.status_id == status.value).scalar()
         
         return Decimal(str(result or 0))
     
@@ -165,5 +168,5 @@ class SQLAlchemyDonationRepository(DonationRepository):
     async def count_by_status(self, status: DonationStatus) -> int:
         """Count donations by status"""
         return self.db.query(DonationModel).filter(
-            DonationModel.status == status
+            DonationModel.status_id == status.value
         ).count()

@@ -21,10 +21,11 @@ class CorrelationFilter(logging.Filter):
         # Try to get correlation ID from context
         correlation_id = getattr(record, 'correlation_id', None)
         if not correlation_id:
-            # Try to get from structlog context
+            # Try to get from structlog context variables
             try:
-                correlation_id = structlog.get_context().get('request_id', 'N/A')
-            except RuntimeError:
+                import structlog.contextvars
+                correlation_id = structlog.contextvars.get_contextvars().get('request_id', 'N/A')
+            except (RuntimeError, AttributeError, ImportError):
                 correlation_id = 'N/A'
         
         record.correlation_id = correlation_id

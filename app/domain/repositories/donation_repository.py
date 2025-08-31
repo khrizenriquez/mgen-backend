@@ -5,8 +5,9 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime
+from uuid import UUID
 
-from app.domain.entities.donation import Donation, DonationStatus, DonationType
+from app.domain.entities.donation import Donation, DonationStatus
 
 
 class DonationRepository(ABC):
@@ -23,7 +24,7 @@ class DonationRepository(ABC):
         pass
     
     @abstractmethod
-    async def get_by_id(self, donation_id: int) -> Optional[Donation]:
+    async def get_by_id(self, donation_id: UUID) -> Optional[Donation]:
         """Get donation by ID"""
         pass
     
@@ -37,8 +38,7 @@ class DonationRepository(ABC):
         self, 
         limit: int = 100, 
         offset: int = 0,
-        status: Optional[DonationStatus] = None,
-        donation_type: Optional[DonationType] = None
+        status: Optional[DonationStatus] = None
     ) -> List[Donation]:
         """Get all donations with optional filtering"""
         pass
@@ -49,7 +49,7 @@ class DonationRepository(ABC):
         pass
     
     @abstractmethod
-    async def delete(self, donation_id: int) -> bool:
+    async def delete(self, donation_id: UUID) -> bool:
         """Delete a donation"""
         pass
     
