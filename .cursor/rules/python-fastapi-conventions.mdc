@@ -1,0 +1,78 @@
+---
+globs: *.py
+description: Python and FastAPI coding conventions for the donation management system
+---
+
+# Python & FastAPI Conventions
+
+## Import Organization
+```python
+# Standard library imports
+from datetime import datetime
+from typing import List, Optional
+from uuid import UUID
+
+# Third-party imports
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+
+# Local imports
+from app.domain.entities.donation import Donation, DonationStatus
+from app.infrastructure.logging import get_logger
+```
+
+## FastAPI Controllers
+- Use `APIRouter()` for organizing endpoints
+- Include docstrings for all endpoints
+- Use dependency injection with `Depends()`
+- Always include structured logging
+- Handle exceptions with try/catch and proper HTTP status codes
+
+```python
+@router.get("/donations")
+async def list_donations(
+    limit: int = Query(100, ge=1, le=1000),
+    repository = Depends(get_repository)
+):
+    """List donations with optional filtering"""
+    try:
+        logger.info("Fetching donations list", limit=limit)
+        # ... implementation
+    except Exception as e:
+        logger.error("Error listing donations", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
+```
+
+## Error Handling
+- Use structured logging for all errors
+- Include `exc_info=True` for exception stack traces
+- Never expose internal error details to clients in production
+- Use appropriate HTTP status codes (400, 404, 500)
+
+## Type Hints
+- Always use type hints for function parameters and return values
+- Use `Optional[T]` for nullable values
+- Use `List[T]` for collections
+- Use `UUID` for database IDs
+
+## Async/Await
+- All database operations must be async
+- Repository methods return `async` functions
+- Controllers use `async def` for endpoints
+- Use `await` for all async calls
+
+## Environment Variables
+- Use `os.getenv()` with defaults for configuration
+- Never hardcode sensitive values
+- Document required environment variables
+
+## Validation
+- Use Pydantic models for request/response validation
+- Implement business validation in domain entities
+- Use `__post_init__` for dataclass validation
+
+## Database Models
+- Use proper SQLAlchemy column types
+- Match real database schema from [schema.sql](mdc:schema.sql)
+- Use `server_default=func.now()` for timestamps
+- Include proper foreign key relationships
