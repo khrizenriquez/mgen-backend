@@ -148,3 +148,4 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if not any(marker.name in ['unit', 'integration', 'slow'] for marker in item.iter_markers()):
             item.add_marker(pytest.mark.unit)
+
