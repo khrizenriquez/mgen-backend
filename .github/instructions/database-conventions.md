@@ -1,0 +1,68 @@
+# Database Conventions
+
+## Schema Synchronization
+- SQLAlchemy models MUST match the real database schema in `schema.sql`
+- Always verify column names, types, and constraints match
+- Use proper PostgreSQL types: UUID, TIMESTAMPTZ, NUMERIC, TEXT
+
+## Model Definitions
+Reference `app/infrastructure/database/models.py` for patterns:
+
+```python
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
+
+class DonationModel(Base):
+    __tablename__ = "donations"
+    
+    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, 
+                server_default=func.gen_random_uuid())
+    amount_gtq = Column(Numeric(12, 2), nullable=False)
+    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+```
+
+## Naming Conventions
+- Table names: lowercase with underscores (e.g., `donations`, `status_catalog`)
+- Column names: lowercase with underscores (e.g., `amount_gtq`, `donor_email`)
+- Foreign keys: `{table}_id` pattern (e.g., `status_id`, `user_id`)
+- UUIDs for primary keys where specified
+- Use `_at` suffix for timestamps (e.g., `created_at`, `updated_at`)
+
+## Status Management
+- Use `status_catalog` table for status definitions
+- Map enum values to status IDs:
+  - `DonationStatus.PENDING = 1` (donation.pending)
+  - `DonationStatus.APPROVED = 2` (donation.approved)
+  - `DonationStatus.DECLINED = 3` (donation.declined)
+  - `DonationStatus.EXPIRED = 4` (donation.expired)
+
+## Migration Strategy
+- Use Alembic for schema migrations: `alembic/`
+- Always test migrations in development containers
+- Run: `docker-compose exec api alembic upgrade head`
+- Verify schema matches after migration
+
+## Repository Patterns
+- Repositories return domain entities, not SQLAlchemy models
+- Use converter methods: `_model_to_entity()` and `_entity_to_model()`
+- All database operations must be async
+- Handle UUID types properly in queries
+
+## Testing Database Changes
+1. Update SQLAlchemy model to match schema
+2. Update domain entity if needed
+3. Update repository converters
+4. Build and test: `docker-compose build api && docker-compose restart api`
+5. Verify with API calls: `curl http://localhost:8000/api/v1/donations`
+
+## Column Type Mapping
+- PostgreSQL UUID → `PostgreSQL_UUID(as_uuid=True)`
+- NUMERIC(12,2) → `Numeric(12, 2)`
+- TIMESTAMPTZ → `DateTime(timezone=True)`
+- TEXT → `Text`
+- INTEGER → `Integer`
+
+## Foreign Key Relationships
+- Always include ForeignKey constraints
+- Use proper table references: `ForeignKey('status_catalog.id')`
+- Consider nullable relationships: `nullable=True` for optional FKs
