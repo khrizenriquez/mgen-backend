@@ -139,12 +139,15 @@ services:
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml
-      - loki_data:/tmp/loki
+      - loki_data:/loki
+      - ./monitoring/loki/data:/loki/data
     networks:
       - donations-network
     restart: unless-stopped
-    user: "0:0"
-
+    user: "10001:10001"  # Non-root user for security
+    environment:
+      - LOKI_USER_ID=10001
+      - LOKI_GROUP_ID=10001
   promtail:
     image: grafana/promtail:2.9.0
     container_name: donations-promtail
