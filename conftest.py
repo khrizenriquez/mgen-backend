@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.main import app
-from app.infrastructure.database.database import get_database_session
+from app.infrastructure.database.database import get_db
 from app.infrastructure.database.models import Base
 
 
@@ -33,7 +33,7 @@ test_engine = create_engine(
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
-def override_get_database_session():
+def override_get_db():
     """Override para usar base de datos de test."""
     try:
         db = TestingSessionLocal()
@@ -43,7 +43,7 @@ def override_get_database_session():
 
 
 # Override de la dependencia de base de datos
-app.dependency_overrides[get_database_session] = override_get_database_session
+app.dependency_overrides[get_db] = override_get_db
 
 
 # ===============================
