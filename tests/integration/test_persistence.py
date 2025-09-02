@@ -32,13 +32,15 @@ class TestDatabasePersistence:
         cursor = db_connection.cursor()
         
         # Insert test data
+        import uuid
+        unique_id = str(uuid.uuid4())[:8]
         test_data = {
-            'donor_email': 'persistence.test@example.com',
-            'donor_name': 'Persistence Test User',
+            'donor_email': f'persistence.test.{unique_id}@example.com',
+            'donor_name': f'Persistence Test User {unique_id}',
             'amount_gtq': 250.00,
             'status_id': 1,  # pending
-            'reference_code': 'PERSIST_TEST_001',
-            'correlation_id': 'test-correlation-persist-001'
+            'reference_code': f'PERSIST_TEST_{unique_id}',
+            'correlation_id': f'test-correlation-persist-{unique_id}'
         }
         
         cursor.execute("""
