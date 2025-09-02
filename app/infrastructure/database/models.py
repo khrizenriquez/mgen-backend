@@ -1,7 +1,7 @@
 """
 SQLAlchemy models for database tables
 """
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, Text, UUID, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Text, UUID, ForeignKey, Boolean, JSON, CheckConstraint
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import relationship
@@ -98,18 +98,25 @@ class DonationModel(Base):
     __tablename__ = "donations"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    amount_gtq = Column(Numeric(12, 2), nullable=False)
+    amount_gtq = Column(Numeric(12, 2), nullable=False, index=True)
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
-    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     paid_at = Column(DateTime(timezone=True), nullable=True)
-    donor_email = Column(Text, nullable=False)
+    donor_email = Column(Text, nullable=False, index=True)
     donor_name = Column(Text, nullable=True)
     donor_nit = Column(Text, nullable=True)
     user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     payu_order_id = Column(Text, nullable=True)
-    reference_code = Column(Text, nullable=False, unique=True)
-    correlation_id = Column(Text, nullable=False, unique=True)
+    reference_code = Column(Text, nullable=False, unique=True, index=True)
+    correlation_id = Column(Text, nullable=False, unique=True, index=True)
+    
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint('amount_gtq > 0', name='check_amount_positive'),
+        # Email validation constraint - simplified for cross-database compatibility
+        CheckConstraint("donor_email LIKE '%@%'", name='check_valid_email_basic'),
+    )
     
     # Relationships
     status = relationship("StatusCatalogModel", back_populates="donations")
@@ -129,13 +136,20 @@ class PaymentEventModel(Base):
     __tablename__ = "payment_events"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False)
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False, index=True)
     event_id = Column(Text, nullable=False, unique=True, index=True)
     source = Column(Text, nullable=False, index=True)  # 'webhook' or 'recon'
-    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
+    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
     payload_raw = Column(JSON, nullable=False, default={})
-    signature_ok = Column(Boolean, nullable=False, default=False)
-    received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    signature_ok = Column(Boolean, nullable=False, default=False, index=True)
+    received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint("source IN ('webhook', 'recon')", name='check_valid_source'),
+        # Simplified time constraint for cross-database compatibility
+        CheckConstraint('received_at IS NOT NULL', name='check_received_at_not_null'),
+    )
     
     # Relationships
     donation = relationship("DonationModel", back_populates="payment_events")
@@ -153,15 +167,23 @@ class EmailLogModel(Base):
     __tablename__ = "email_logs"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False)
-    to_email = Column(Text, nullable=False)
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False, index=True)
+    to_email = Column(Text, nullable=False, index=True)
     type = Column(Text, nullable=False, index=True)  # 'receipt' or 'resend'
-    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
-    provider_msg_id = Column(Text, unique=True, nullable=True)
-    attempt = Column(Integer, nullable=False, default=0)
+    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
+    provider_msg_id = Column(Text, unique=True, nullable=True, index=True)
+    attempt = Column(Integer, nullable=False, default=0, index=True)
     last_error = Column(Text, nullable=True)
-    sent_at = Column(DateTime(timezone=True), nullable=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True, index=True)
     provider_event_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Table constraints
+    __table_args__ = (
+        CheckConstraint("type IN ('receipt', 'resend')", name='check_valid_email_type'),
+        CheckConstraint('attempt >= 0', name='check_attempt_non_negative'),
+        # Email validation constraint - simplified for cross-database compatibility
+        CheckConstraint("to_email LIKE '%@%'", name='check_valid_email_format_basic'),
+    )
     
     # Relationships
     donation = relationship("DonationModel", back_populates="email_logs")
