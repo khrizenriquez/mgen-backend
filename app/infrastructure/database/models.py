@@ -1,13 +1,93 @@
 """
 SQLAlchemy models for database tables
 """
-from sqlalchemy import Column, Integer, String, Numeric, DateTime, Text, UUID, ForeignKey
+from sqlalchemy import Column, Integer, String, Numeric, DateTime, Text, UUID, ForeignKey, Boolean, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum
 
 from app.infrastructure.database.database import Base
+
+
+class StatusCatalogModel(Base):
+    """
+    SQLAlchemy model for status_catalog table
+    Manages all status definitions for the system
+    """
+    __tablename__ = "status_catalog"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(Text, nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    
+    # Relationships
+    donations = relationship("DonationModel", back_populates="status")
+    payment_events = relationship("PaymentEventModel", back_populates="status")
+    email_logs = relationship("EmailLogModel", back_populates="status")
+    
+    def __repr__(self):
+        return f"<StatusCatalog(id={self.id}, code='{self.code}')>"
+
+
+class UserModel(Base):
+    """
+    SQLAlchemy model for users table
+    Manages user authentication and identity
+    """
+    __tablename__ = "users"
+    
+    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    email = Column(Text, nullable=False, unique=True, index=True)
+    password_hash = Column(Text, nullable=False)
+    email_verified = Column(Boolean, nullable=False, default=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    # Relationships
+    donations = relationship("DonationModel", back_populates="user")
+    user_roles = relationship("UserRoleModel", back_populates="user", cascade="all, delete-orphan")
+    donor_contact = relationship("DonorContactModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, email='{self.email}')>"
+
+
+class RoleModel(Base):
+    """
+    SQLAlchemy model for roles table
+    Manages user roles and permissions
+    """
+    __tablename__ = "roles"
+    
+    id = Column(Integer, primary_key=True, index=True, server_default=func.identity())
+    name = Column(Text, nullable=False, unique=True, index=True)
+    
+    # Relationships
+    user_roles = relationship("UserRoleModel", back_populates="role", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Role(id={self.id}, name='{self.name}')>"
+
+
+class UserRoleModel(Base):
+    """
+    SQLAlchemy model for user_roles table
+    Junction table for many-to-many user-role relationship
+    """
+    __tablename__ = "user_roles"
+    
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    role_id = Column(Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True)
+    
+    # Relationships
+    user = relationship("UserModel", back_populates="user_roles")
+    role = relationship("RoleModel", back_populates="user_roles")
+    
+    def __repr__(self):
+        return f"<UserRole(user_id={self.user_id}, role_id={self.role_id})>"
 
 
 class DonationModel(Base):
@@ -31,5 +111,81 @@ class DonationModel(Base):
     reference_code = Column(Text, nullable=False, unique=True)
     correlation_id = Column(Text, nullable=False, unique=True)
     
+    # Relationships
+    status = relationship("StatusCatalogModel", back_populates="donations")
+    user = relationship("UserModel", back_populates="donations")
+    payment_events = relationship("PaymentEventModel", back_populates="donation", cascade="all, delete-orphan")
+    email_logs = relationship("EmailLogModel", back_populates="donation", cascade="all, delete-orphan")
+    
     def __repr__(self):
         return f"<Donation(id={self.id}, amount_gtq={self.amount_gtq}, status_id={self.status_id})>"
+
+
+class PaymentEventModel(Base):
+    """
+    SQLAlchemy model for payment_events table
+    Manages payment webhook and reconciliation events
+    """
+    __tablename__ = "payment_events"
+    
+    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False)
+    event_id = Column(Text, nullable=False, unique=True, index=True)
+    source = Column(Text, nullable=False, index=True)  # 'webhook' or 'recon'
+    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
+    payload_raw = Column(JSON, nullable=False, default={})
+    signature_ok = Column(Boolean, nullable=False, default=False)
+    received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    # Relationships
+    donation = relationship("DonationModel", back_populates="payment_events")
+    status = relationship("StatusCatalogModel", back_populates="payment_events")
+    
+    def __repr__(self):
+        return f"<PaymentEvent(id={self.id}, event_id='{self.event_id}', source='{self.source}')>"
+
+
+class EmailLogModel(Base):
+    """
+    SQLAlchemy model for email_logs table
+    Manages email sending and delivery tracking
+    """
+    __tablename__ = "email_logs"
+    
+    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False)
+    to_email = Column(Text, nullable=False)
+    type = Column(Text, nullable=False, index=True)  # 'receipt' or 'resend'
+    status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
+    provider_msg_id = Column(Text, unique=True, nullable=True)
+    attempt = Column(Integer, nullable=False, default=0)
+    last_error = Column(Text, nullable=True)
+    sent_at = Column(DateTime(timezone=True), nullable=True)
+    provider_event_at = Column(DateTime(timezone=True), nullable=True)
+    
+    # Relationships
+    donation = relationship("DonationModel", back_populates="email_logs")
+    status = relationship("StatusCatalogModel", back_populates="email_logs")
+    
+    def __repr__(self):
+        return f"<EmailLog(id={self.id}, type='{self.type}', to_email='{self.to_email}')>"
+
+
+class DonorContactModel(Base):
+    """
+    SQLAlchemy model for donor_contacts table
+    Manages additional donor contact information
+    """
+    __tablename__ = "donor_contacts"
+    
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    phone_number = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    contact_preference = Column(Text, nullable=True, index=True)  # 'email', 'phone', 'mail'
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    
+    # Relationships
+    user = relationship("UserModel", back_populates="donor_contact")
+    
+    def __repr__(self):
+        return f"<DonorContact(user_id={self.user_id}, preference='{self.contact_preference}')>"
