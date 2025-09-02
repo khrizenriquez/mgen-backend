@@ -29,7 +29,7 @@ class TestDonationConstraints:
             correlation_id="CORR_001"
         )
         
-        with pytest.raises(IntegrityError, match="check_amount_positive"):
+        with pytest.raises(IntegrityError, match="chk_donations_amount_positive"):
             db_session.add(donation)
             db_session.commit()
     
@@ -44,7 +44,7 @@ class TestDonationConstraints:
             correlation_id="CORR_002"
         )
         
-        with pytest.raises(IntegrityError, match="check_amount_positive"):
+        with pytest.raises(IntegrityError, match="chk_donations_amount_positive"):
             db_session.add(donation)
             db_session.commit()
     
@@ -60,7 +60,23 @@ class TestDonationConstraints:
             correlation_id="CORR_003"
         )
         
-        with pytest.raises(IntegrityError, match="check_valid_email_basic"):
+        with pytest.raises(IntegrityError, match="chk_donations_email_format"):
+            db_session.add(donation)
+            db_session.commit()
+    
+    def test_reference_code_format_constraint(self, db_session):
+        """Test that reference code format is validated"""
+        # Invalid reference code format (too short)
+        donation = DonationModel(
+            id=uuid4(),
+            amount_gtq=Decimal("100.00"),
+            status_id=1,
+            donor_email="valid@example.com",
+            reference_code="AB",  # Too short
+            correlation_id="CORR_005"
+        )
+        
+        with pytest.raises(IntegrityError, match="chk_donations_reference_code_format"):
             db_session.add(donation)
             db_session.commit()
     
@@ -98,7 +114,7 @@ class TestPaymentEventConstraints:
             payload_raw={}
         )
         
-        with pytest.raises(IntegrityError, match="check_valid_source"):
+        with pytest.raises(IntegrityError, match="chk_payment_events_source_valid"):
             db_session.add(payment_event)
             db_session.commit()
     
@@ -140,7 +156,7 @@ class TestEmailLogConstraints:
             status_id=1
         )
         
-        with pytest.raises(IntegrityError, match="check_valid_email_type"):
+        with pytest.raises(IntegrityError, match="chk_email_logs_type_valid"):
             db_session.add(email_log)
             db_session.commit()
     
@@ -155,7 +171,7 @@ class TestEmailLogConstraints:
             attempt=-1  # Negative attempt
         )
         
-        with pytest.raises(IntegrityError, match="check_attempt_non_negative"):
+        with pytest.raises(IntegrityError, match="chk_email_logs_attempt_positive"):
             db_session.add(email_log)
             db_session.commit()
     
@@ -169,7 +185,7 @@ class TestEmailLogConstraints:
             status_id=1
         )
         
-        with pytest.raises(IntegrityError, match="check_valid_email_format_basic"):
+        with pytest.raises(IntegrityError, match="chk_donations_email_format"):
             db_session.add(email_log)
             db_session.commit()
     
