@@ -36,7 +36,7 @@ class UserModel(Base):
     SQLAlchemy model for users table
     Manages user authentication and identity
     """
-    __tablename__ = "users"
+    __tablename__ = "app_user"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     email = Column(Text, nullable=False, unique=True, index=True)
@@ -60,9 +60,9 @@ class RoleModel(Base):
     SQLAlchemy model for roles table
     Manages user roles and permissions
     """
-    __tablename__ = "roles"
+    __tablename__ = "app_role"
     
-    id = Column(Integer, primary_key=True, index=True, server_default=func.identity())
+    id = Column(Integer, primary_key=True, index=True)
     name = Column(Text, nullable=False, unique=True, index=True)
     
     # Relationships
@@ -77,10 +77,10 @@ class UserRoleModel(Base):
     SQLAlchemy model for user_roles table
     Junction table for many-to-many user-role relationship
     """
-    __tablename__ = "user_roles"
+    __tablename__ = "app_user_role"
     
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
-    role_id = Column(Integer, ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True)
+    role_id = Column(Integer, ForeignKey('app_role.id', ondelete='CASCADE'), primary_key=True)
     
     # Relationships
     user = relationship("UserModel", back_populates="user_roles")
@@ -95,7 +95,7 @@ class DonationModel(Base):
     SQLAlchemy model for donations table
     Matches the real database schema from schema.sql
     """
-    __tablename__ = "donations"
+    __tablename__ = "donation"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     amount_gtq = Column(Numeric(12, 2), nullable=False, index=True)
@@ -106,7 +106,7 @@ class DonationModel(Base):
     donor_email = Column(Text, nullable=False, index=True)
     donor_name = Column(Text, nullable=True)
     donor_nit = Column(Text, nullable=True)
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id'), nullable=True)
     payu_order_id = Column(Text, nullable=True)
     reference_code = Column(Text, nullable=False, unique=True, index=True)
     correlation_id = Column(Text, nullable=False, unique=True, index=True)
@@ -133,10 +133,10 @@ class PaymentEventModel(Base):
     SQLAlchemy model for payment_events table
     Manages payment webhook and reconciliation events
     """
-    __tablename__ = "payment_events"
+    __tablename__ = "payment_event"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False, index=True)
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
     event_id = Column(Text, nullable=False, unique=True, index=True)
     source = Column(Text, nullable=False, index=True)  # 'webhook' or 'recon'
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
@@ -164,10 +164,10 @@ class EmailLogModel(Base):
     SQLAlchemy model for email_logs table
     Manages email sending and delivery tracking
     """
-    __tablename__ = "email_logs"
+    __tablename__ = "email_log"
     
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donations.id', ondelete='RESTRICT'), nullable=False, index=True)
+    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
     to_email = Column(Text, nullable=False, index=True)
     type = Column(Text, nullable=False, index=True)  # 'receipt' or 'resend'
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
@@ -198,9 +198,9 @@ class DonorContactModel(Base):
     SQLAlchemy model for donor_contacts table
     Manages additional donor contact information
     """
-    __tablename__ = "donor_contacts"
+    __tablename__ = "donor_contact"
     
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True)
     phone_number = Column(Text, nullable=True)
     address = Column(Text, nullable=True)
     contact_preference = Column(Text, nullable=True, index=True)  # 'email', 'phone', 'mail'
