@@ -255,3 +255,10 @@ tempo_data/
 # Load testing
 *.jmx
 results/
+
+# Node.js (should not be in Python backend)
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
