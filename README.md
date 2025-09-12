@@ -96,45 +96,6 @@ Connection Tab:
 
 **Nota**: Estos son valores de desarrollo. En producción las credenciales se gestionarán via secrets (Railway/Render).
 
-### Variables de Entorno
-
-Crea un archivo `.env` desde la plantilla para personalizar configuraciones:
-
-```bash
-cp env.example .env
-```
-
-Variables importantes de pgAdmin:
-```bash
-# Configuración de pgAdmin (compatible con Windows/macOS/Linux)
-PGADMIN_DEFAULT_EMAIL=admin@duku.dev
-PGADMIN_DEFAULT_PASSWORD=admin123
-```
-
-> **Importante**: Se usa formato de email completo (`admin@duku.dev`) para evitar errores de validación en Windows. En sistemas Unix `admin@local` también funciona, pero `admin@duku.dev` garantiza compatibilidad universal.
-
-## 📊 Monitoreo y Observabilidad
-
-El sistema incluye un stack completo de observabilidad:
-
-- **Grafana** (`http://localhost:3000`): Dashboards y visualizaciones
-- **Prometheus** (`http://localhost:9090`): Recolección de métricas
-- **Loki** (`http://localhost:3100`): Agregación de logs
-- **Promtail**: Recolector de logs de contenedores
-
-### Recursos de Sistema
-
-**Uso de RAM**: ~857 MB total
-- pgAdmin: 239 MB (desarrollo)
-- RabbitMQ: 143 MB
-- Grafana: 117 MB
-- Loki: 104 MB
-- API Backend: 84 MB
-- PostgreSQL: 26 MB
-- Frontend: 8 MB
-
-**Uso de Disco**: ~3.4 GB (core) + ~2.2 GB (cache reclaimable)
-
 ## 🏗️ Arquitectura
 
 - **Hexagonal Architecture** (Ports & Adapters)
@@ -142,4 +103,4 @@ El sistema incluye un stack completo de observabilidad:
 - **SQLAlchemy** ORM + **Alembic** migrations
 - **PostgreSQL** database
 - **RabbitMQ** messaging
-- **Prometheus** + **Grafana** + **Loki** monitoring stack
+- **Prometheus** + **Grafana** monitoring
