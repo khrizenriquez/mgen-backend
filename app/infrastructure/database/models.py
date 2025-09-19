@@ -20,7 +20,9 @@ class StatusCatalogModel(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     code = Column(Text, nullable=False, unique=True, index=True)
-    description = Column(Text, nullable=True)
+    description = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Relationships
     donations = relationship("DonationModel", back_populates="status")
@@ -64,6 +66,9 @@ class RoleModel(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(Text, nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Relationships
     user_roles = relationship("UserRoleModel", back_populates="role", cascade="all, delete-orphan")
@@ -79,8 +84,11 @@ class UserRoleModel(Base):
     """
     __tablename__ = "app_user_role"
     
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True)
-    role_id = Column(Integer, ForeignKey('app_role.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True, nullable=False)
+    role_id = Column(Integer, ForeignKey('app_role.id', ondelete='CASCADE'), primary_key=True, nullable=False)
+    assigned_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Relationships
     user = relationship("UserModel", back_populates="user_roles")
@@ -143,6 +151,8 @@ class PaymentEventModel(Base):
     payload_raw = Column(JSON, nullable=False, default={})
     signature_ok = Column(Boolean, nullable=False, default=False, index=True)
     received_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Table constraints
     __table_args__ = (
@@ -176,6 +186,8 @@ class EmailLogModel(Base):
     last_error = Column(Text, nullable=True)
     sent_at = Column(DateTime(timezone=True), nullable=True, index=True)
     provider_event_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Table constraints
     __table_args__ = (
@@ -204,6 +216,7 @@ class DonorContactModel(Base):
     phone_number = Column(Text, nullable=True)
     address = Column(Text, nullable=True)
     contact_preference = Column(Text, nullable=True, index=True)  # 'email', 'phone', 'mail'
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
     # Relationships
