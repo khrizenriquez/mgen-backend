@@ -89,7 +89,7 @@ instance/
 .webassets-cache
 
 # SQLAlchemy
-alembic/versions/*.py
+# alembic/versions/*.py  # Commented out to allow migration files
 !alembic/versions/.gitkeep
 
 # Docker
