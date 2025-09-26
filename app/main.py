@@ -17,6 +17,7 @@ import structlog
 
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
+from app.adapters.controllers.user_controller import router as user_router
 from app.infrastructure.database.database import engine, Base
 from app.infrastructure.logging import setup_logging, get_logger, LoggingMiddleware
 from sqlalchemy import text
@@ -107,6 +108,7 @@ async def shutdown_event():
 # Include routers
 app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
+app.include_router(user_router, prefix="/api/v1", tags=["users"])
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")

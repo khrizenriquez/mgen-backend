@@ -224,3 +224,21 @@ class DonorContactModel(Base):
     
     def __repr__(self):
         return f"<DonorContact(user_id={self.user_id}, preference='{self.contact_preference}')>"
+
+
+class SimpleUserModel(Base):
+    """
+    Simple User model for CRUD POC
+    """
+    __tablename__ = "simple_users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    def __repr__(self):
+        return f"<SimpleUser(id={self.id}, email='{self.email}', name='{self.first_name} {self.last_name}')>"
