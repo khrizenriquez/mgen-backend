@@ -7,18 +7,15 @@ from sqlalchemy.orm import sessionmaker
 import os
 from typing import Generator
 
-# Database URL from environment
-DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:postgres@localhost:5432/donations_db"
-)
+# Load DATABASE_URL from environment
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Create SQLAlchemy engine
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    pool_size=int(os.getenv("DB_POOL_SIZE", "10")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "20")),
     echo=os.getenv("SQL_ECHO", "false").lower() == "true"
 )
 

@@ -5,6 +5,10 @@ from alembic import context
 import os
 import sys
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+load_dotenv()
+
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
