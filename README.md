@@ -72,6 +72,7 @@ copy env.example .env
 
 # 7. Ejecutar migraciones
 alembic upgrade head
+# Si da error "tabla ya existe", ejecutar: alembic stamp head
 
 # 8. Levantar la aplicación
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
@@ -125,6 +126,15 @@ python -c "import socket; s = socket.socket(); print('PostgreSQL OK' if s.connec
 
 # Si no está corriendo, iniciar PostgreSQL (Windows Service)
 Start-Service postgresql-x64-15  # Ajustar versión según instalación
+```
+
+#### ❌ Error en migraciones: "tabla ya existe"
+```powershell
+# Síntoma
+ProgrammingError: la relación «status_catalog» ya existe
+
+# Solución: Sincronizar Alembic con tablas existentes
+alembic stamp head
 ```
 
 ### Archivos de dependencias
