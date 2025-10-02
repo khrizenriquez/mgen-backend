@@ -2,7 +2,7 @@
 Donation Controller - HTTP API endpoints (Simplified version)
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 from decimal import Decimal
 
@@ -10,6 +10,10 @@ from app.domain.entities.donation import DonationStatus
 from app.infrastructure.database.repository_impl import SQLAlchemyDonationRepository
 from app.infrastructure.database.database import get_db
 from app.infrastructure.logging import get_logger
+from app.infrastructure.auth.dependencies import (
+    get_current_active_user, require_admin, require_organization, require_auditor, require_any_role
+)
+from app.infrastructure.database.models import UserModel
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -22,25 +26,71 @@ def get_donation_repository(db=Depends(get_db)) -> SQLAlchemyDonationRepository:
 
 @router.get("/donations")
 async def list_donations(
+    current_user: UserModel = Depends(get_current_active_user),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     status: Optional[DonationStatus] = None,
     repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
 ):
-    """List donations with optional filtering (simplified version)"""
+    """List donations with optional filtering
+
+    Requires authentication:
+    - ADMIN: See all donations in the system
+    - ORGANIZATION: See donations from their organization (TODO: implement organization filtering)
+    - AUDITOR: See all donations (read-only access)
+    - DONOR: See only their own donations
+    - USER: No access (empty list)
+    """
     try:
         logger.info(
             "Fetching donations list",
+            user_email=current_user.email,
             limit=limit,
             offset=offset,
             status=status.name if status else None
         )
-        
-        donations = await repository.get_all(
-            limit=limit,
-            offset=offset,
-            status=status
-        )
+
+        # Check user roles
+        user_roles = [role.name for role in current_user.user_roles]
+        is_admin = "ADMIN" in user_roles
+        is_organization = "ORGANIZATION" in user_roles
+        is_auditor = "AUDITOR" in user_roles
+        is_donor = "DONOR" in user_roles
+
+        # Filter donations based on role
+        if is_admin:
+            # Admins see all donations
+            donations = await repository.get_all(
+                limit=limit,
+                offset=offset,
+                status=status
+            )
+        elif is_organization:
+            # Organizations see donations from their organization (TODO: implement organization filtering)
+            # For now, same as admin
+            donations = await repository.get_all(
+                limit=limit,
+                offset=offset,
+                status=status
+            )
+        elif is_auditor:
+            # Auditors see all donations (read-only)
+            donations = await repository.get_all(
+                limit=limit,
+                offset=offset,
+                status=status
+            )
+        elif is_donor:
+            # Donors see only their own donations
+            donations = await repository.get_all(
+                limit=limit,
+                offset=offset,
+                status=status,
+                user_id=current_user.id
+            )
+        else:
+            # Other users see no donations
+            donations = []
         
         donation_responses = []
         for donation in donations:
@@ -86,23 +136,77 @@ async def list_donations(
 
 @router.get("/donations/stats")
 async def get_donation_statistics(
+    current_user: UserModel = Depends(get_current_active_user),
     repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
 ):
-    """Get donation statistics (simplified version)"""
+    """Get donation statistics
+
+    Requires authentication:
+    - ADMIN: See global statistics
+    - ORGANIZATION: See statistics from their organization (TODO: implement organization filtering)
+    - AUDITOR: See global statistics (read-only)
+    - DONOR: See statistics from their own donations
+    - USER: No access (zero statistics)
+    """
     try:
-        logger.info("Fetching donation statistics")
-        
-        # Get total amounts by status
-        pending_total = await repository.get_total_amount_by_status(DonationStatus.PENDING)
-        approved_total = await repository.get_total_amount_by_status(DonationStatus.APPROVED)
-        declined_total = await repository.get_total_amount_by_status(DonationStatus.DECLINED)
-        expired_total = await repository.get_total_amount_by_status(DonationStatus.EXPIRED)
-        
-        # Get counts by status
-        pending_count = await repository.count_by_status(DonationStatus.PENDING)
-        approved_count = await repository.count_by_status(DonationStatus.APPROVED)
-        declined_count = await repository.count_by_status(DonationStatus.DECLINED)
-        expired_count = await repository.count_by_status(DonationStatus.EXPIRED)
+        logger.info("Fetching donation statistics", user_email=current_user.email)
+
+        # Check user roles
+        user_roles = [role.name for role in current_user.user_roles]
+        is_admin = "ADMIN" in user_roles
+        is_organization = "ORGANIZATION" in user_roles
+        is_auditor = "AUDITOR" in user_roles
+        is_donor = "DONOR" in user_roles
+
+        if is_admin:
+            # Admins see global statistics
+            pending_total = await repository.get_total_amount_by_status(DonationStatus.PENDING)
+            approved_total = await repository.get_total_amount_by_status(DonationStatus.APPROVED)
+            declined_total = await repository.get_total_amount_by_status(DonationStatus.DECLINED)
+            expired_total = await repository.get_total_amount_by_status(DonationStatus.EXPIRED)
+
+            pending_count = await repository.count_by_status(DonationStatus.PENDING)
+            approved_count = await repository.count_by_status(DonationStatus.APPROVED)
+            declined_count = await repository.count_by_status(DonationStatus.DECLINED)
+            expired_count = await repository.count_by_status(DonationStatus.EXPIRED)
+        elif is_organization:
+            # Organizations see statistics from their organization (TODO: implement organization filtering)
+            # For now, same as admin
+            pending_total = await repository.get_total_amount_by_status(DonationStatus.PENDING)
+            approved_total = await repository.get_total_amount_by_status(DonationStatus.APPROVED)
+            declined_total = await repository.get_total_amount_by_status(DonationStatus.DECLINED)
+            expired_total = await repository.get_total_amount_by_status(DonationStatus.EXPIRED)
+
+            pending_count = await repository.count_by_status(DonationStatus.PENDING)
+            approved_count = await repository.count_by_status(DonationStatus.APPROVED)
+            declined_count = await repository.count_by_status(DonationStatus.DECLINED)
+            expired_count = await repository.count_by_status(DonationStatus.EXPIRED)
+        elif is_auditor:
+            # Auditors see global statistics (read-only)
+            pending_total = await repository.get_total_amount_by_status(DonationStatus.PENDING)
+            approved_total = await repository.get_total_amount_by_status(DonationStatus.APPROVED)
+            declined_total = await repository.get_total_amount_by_status(DonationStatus.DECLINED)
+            expired_total = await repository.get_total_amount_by_status(DonationStatus.EXPIRED)
+
+            pending_count = await repository.count_by_status(DonationStatus.PENDING)
+            approved_count = await repository.count_by_status(DonationStatus.APPROVED)
+            declined_count = await repository.count_by_status(DonationStatus.DECLINED)
+            expired_count = await repository.count_by_status(DonationStatus.EXPIRED)
+        elif is_donor:
+            # Donors see only their own donation statistics
+            pending_total = await repository.get_total_amount_by_status(DonationStatus.PENDING, user_id=current_user.id)
+            approved_total = await repository.get_total_amount_by_status(DonationStatus.APPROVED, user_id=current_user.id)
+            declined_total = await repository.get_total_amount_by_status(DonationStatus.DECLINED, user_id=current_user.id)
+            expired_total = await repository.get_total_amount_by_status(DonationStatus.EXPIRED, user_id=current_user.id)
+
+            pending_count = await repository.count_by_status(DonationStatus.PENDING, user_id=current_user.id)
+            approved_count = await repository.count_by_status(DonationStatus.APPROVED, user_id=current_user.id)
+            declined_count = await repository.count_by_status(DonationStatus.DECLINED, user_id=current_user.id)
+            expired_count = await repository.count_by_status(DonationStatus.EXPIRED, user_id=current_user.id)
+        else:
+            # Other users see no statistics
+            pending_total = approved_total = declined_total = expired_total = 0
+            pending_count = approved_count = declined_count = expired_count = 0
         
         stats = {
             "total_amount_gtq": float(pending_total + approved_total + declined_total + expired_total),
