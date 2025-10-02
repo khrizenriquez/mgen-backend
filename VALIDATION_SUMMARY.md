@@ -113,3 +113,5 @@ Para futuras validaciones:
 Tu sistema de donaciones tiene **integridad de datos garantizada** a nivel de base de datos y **trazabilidad completa** de requests HTTP.
 
 🎉 **¡Listo para continuar con desarrollo!**
+
+

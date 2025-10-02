@@ -25,6 +25,55 @@ docker-compose logs -f
 docker-compose down
 ```
 
+### Validación de Configuración
+
+La aplicación incluye un script automático de validación que verifica que todas las variables críticas estén configuradas correctamente:
+
+```bash
+# Ejecutar validación manualmente
+python scripts/validate_config.py
+```
+
+**La validación se ejecuta automáticamente al iniciar la aplicación.**
+
+### Variables de Entorno Requeridas
+
+Antes de ejecutar la aplicación, configura las siguientes variables de entorno críticas para seguridad:
+
+```bash
+# JWT Secret (REQUERIDO - sin valor por defecto)
+JWT_SECRET_KEY=your-super-secure-jwt-secret-key-here
+
+# Rate Limiting
+RATE_LIMIT_REQUESTS=10
+RATE_LIMIT_WINDOW=60
+
+# Email Configuration (opcional para desarrollo)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=your-email@gmail.com
+FRONTEND_URL=http://localhost:3000
+
+# Default User Password (solo para desarrollo)
+DEFAULT_USER_PASSWORD=seminario123
+```
+
+**⚠️ IMPORTANTE**: Sin `JWT_SECRET_KEY` configurada, la aplicación no iniciará.
+
+### Usuarios de Prueba Automáticos
+
+Al levantar los contenedores por primera vez, se crearán automáticamente **3 usuarios de prueba**:
+
+| Email | Password | Rol | Descripción |
+|-------|----------|-----|-------------|
+| `adminseminario@test.com` | `seminario123` | ADMIN | Administrador del sistema |
+| `donorseminario@test.com` | `seminario123` | DONOR | Usuario donante registrado |
+| `userseminario@test.com` | `seminario123` | USER | Usuario regular (puede actualizarse a DONOR) |
+
+**Nota**: Los usuarios se crean solo en modo desarrollo (`ENVIRONMENT=development`).
+
 ## 🪟 Configuración para Windows (Desarrollo Local)
 
 ### Prerrequisitos Windows
@@ -298,6 +347,140 @@ Connection Tab:
 
 **Nota**: Estos son valores de desarrollo. En producción las credenciales se gestionarán via secrets (Railway/Render).
 
+## 🔐 Autenticación y Roles
+
+El sistema implementa autenticación JWT completa con control de acceso basado en roles y soporte para múltiples organizaciones.
+
+### Jerarquía de Roles del Sistema
+
+| Rol | Nivel | Descripción | Permisos |
+|-----|-------|-------------|----------|
+| **ADMIN** | 🔴 Máximo | Administrador del sistema | ✅ **Acceso completo** a todas las organizaciones y datos<br>✅ Gestionar usuarios y roles<br>✅ Ver todas las estadísticas globales |
+| **ORGANIZATION** | 🟠 Alto | Administrador de ONG | ✅ Gestionar su propia organización<br>✅ Ver donaciones de su ONG<br>✅ Gestionar usuarios de su ONG<br>❌ No ve datos de otras ONGs |
+| **AUDITOR** | 🟡 Medio | Auditor/Compliance | ✅ **Solo lectura** de toda la información<br>✅ Ver estadísticas y reportes<br>❌ No puede modificar datos |
+| **DONOR** | 🟢 Bajo | Donante registrado | ✅ Ver sus propias donaciones<br>✅ Gestionar su perfil<br>✅ Realizar donaciones |
+| **USER** | 🔵 Mínimo | Usuario regular | ✅ Acceso básico al sistema<br>✅ Gestionar su perfil<br>❌ Acceso limitado a datos |
+
+### 🏢 Arquitectura Multi-ONG
+
+El sistema está preparado para manejar múltiples organizaciones de manera escalable:
+
+#### **Organización por Defecto**
+- **ID**: `550e8400-e29b-41d4-a716-446655440000`
+- **Nombre**: Fundación Donaciones Guatemala
+- **Estado**: Activa por defecto
+
+#### **Características Multi-ONG**
+- ✅ **Aislamiento de datos**: Cada organización ve solo sus propios datos
+- ✅ **Control administrativo**: Los admins de organización gestionan su entidad
+- ✅ **Escalabilidad**: Fácil agregar nuevas ONGs sin afectar existentes
+- ✅ **Auditoría global**: Auditores pueden ver datos de todas las organizaciones
+- ✅ **Flexibilidad**: Un usuario puede cambiar de organización (gestionado por admin)
+
+#### **Asignación de Usuarios a Organizaciones**
+- Los nuevos usuarios se registran sin organización asignada
+- Los administradores asignan usuarios a organizaciones según corresponda
+- Los usuarios ORGANIZATION solo pueden gestionar usuarios de su propia organización
+- Los usuarios ADMIN pueden gestionar usuarios de cualquier organización
+
+#### **Endpoints de Organizaciones (Admin Only)**
+```http
+# Gestión de Organizaciones
+GET  /api/v1/organizations           # Listar todas las organizaciones
+POST /api/v1/organizations           # Crear nueva organización
+GET  /api/v1/organizations/{id}      # Ver organización específica
+PUT  /api/v1/organizations/{id}      # Actualizar organización
+DELETE /api/v1/organizations/{id}    # Eliminar organización
+
+# Estadísticas por Organización
+GET  /api/v1/organizations/summary/all    # Resumen de todas las organizaciones
+GET  /api/v1/organizations/{id}/summary   # Resumen de organización específica
+```
+
+### Endpoints de Autenticación
+
+#### Públicos (sin autenticación requerida)
+```http
+POST /api/v1/auth/register          # Registro de nuevos usuarios
+POST /api/v1/auth/login             # Inicio de sesión
+POST /api/v1/auth/forgot-password   # Solicitar reset de contraseña
+POST /api/v1/auth/reset-password    # Reset de contraseña con token
+POST /api/v1/auth/verify-email      # Verificar email con token
+```
+
+#### Protegidos (requieren JWT Bearer token)
+```http
+GET  /api/v1/auth/dashboard         # Dashboard personalizado por rol
+GET  /api/v1/auth/me                # Información del usuario actual
+POST /api/v1/auth/change-password   # Cambiar contraseña
+POST /api/v1/auth/refresh           # Refresh token de acceso
+
+# Solo ADMIN
+GET  /api/v1/auth/admin/users       # Lista de todos los usuarios
+```
+
+### Control de Acceso en Endpoints Existentes
+
+#### Usuarios (`/api/v1/users`)
+- `GET /users` - **ADMIN/ORGANIZATION**: Lista de usuarios (filtrada por organización para ORGANIZATION)
+- `GET /users/{id}` - **Usuario autenticado**: Solo puede ver su propio perfil (o ADMIN/ORGANIZATION ve perfiles de su organización)
+- `PUT /users/{id}` - **Usuario autenticado**: Solo puede actualizar su propio perfil (o ADMIN/ORGANIZATION actualiza perfiles de su organización)
+- `DELETE /users/{id}` - **ADMIN/ORGANIZATION**: Eliminar usuarios de su organización (solo ADMIN puede eliminar de cualquier organización)
+- `POST /users` - **Público**: Crear nuevo usuario (registro)
+
+#### Donaciones (`/api/v1/donations`)
+- `GET /donations` - **Usuario autenticado**:
+  - **ADMIN**: Ve todas las donaciones del sistema
+  - **ORGANIZATION**: Ve donaciones de su organización
+  - **AUDITOR**: Ve todas las donaciones (solo lectura)
+  - **DONOR**: Ve solo sus propias donaciones
+  - **USER**: Sin acceso (lista vacía)
+- `GET /donations/stats` - **Usuario autenticado**:
+  - **ADMIN**: Estadísticas globales del sistema
+  - **ORGANIZATION**: Estadísticas de su organización
+  - **AUDITOR**: Estadísticas globales (solo lectura)
+  - **DONOR**: Estadísticas de sus propias donaciones
+  - **USER**: Sin acceso (estadísticas en cero)
+
+### Uso de JWT Tokens
+
+#### Obtener Token
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+```
+
+#### Usar Token en Requests
+```bash
+curl -X GET "http://localhost:8000/api/v1/auth/dashboard" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN_HERE"
+```
+
+#### Refresh Token
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "YOUR_REFRESH_TOKEN_HERE"}'
+```
+
+### Variables de Entorno para JWT
+
+```env
+# JWT Configuration
+JWT_SECRET_KEY=your-super-secret-key-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Email Configuration (para forgot password)
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+FROM_EMAIL=your-email@gmail.com
+FRONTEND_URL=http://localhost:3000
+```
+
 ## 🏗️ Arquitectura
 
 - **Hexagonal Architecture** (Ports & Adapters)
@@ -306,3 +489,4 @@ Connection Tab:
 - **PostgreSQL** database
 - **RabbitMQ** messaging
 - **Prometheus** + **Grafana** monitoring
+- **JWT Authentication** con control de acceso basado en roles

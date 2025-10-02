@@ -5,6 +5,23 @@ Main FastAPI application with hexagonal architecture
 from dotenv import load_dotenv
 load_dotenv()
 
+import sys
+from pathlib import Path
+
+# Validate configuration before starting
+print("🔍 Running configuration validation...")
+result = subprocess.run([sys.executable, "scripts/validate_config.py"],
+                       capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+
+if result.returncode != 0:
+    print("❌ Configuration validation failed!")
+    print(result.stdout)
+    if result.stderr:
+        print("STDERR:", result.stderr)
+    sys.exit(1)
+else:
+    print("✅ Configuration validation passed!")
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -15,12 +32,19 @@ import logging
 import os
 import structlog
 
+from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
+from app.adapters.controllers.organization_controller import router as organization_router
+from app.adapters.controllers.user_controller import router as user_router
 from app.infrastructure.database.database import engine, Base
+from app.infrastructure.database.seeders import run_seeders
 from app.infrastructure.logging import setup_logging, get_logger, LoggingMiddleware
+from app.infrastructure.middleware.rate_limit import RateLimitMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import sessionmaker
+import subprocess
 
 # Setup structured logging
 setup_logging()
@@ -41,6 +65,13 @@ app = FastAPI(
 
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
+
+# Rate limiting middleware (before CORS for auth endpoints)
+app.add_middleware(
+    RateLimitMiddleware,
+    max_requests=int(os.getenv("RATE_LIMIT_REQUESTS", "10")),
+    window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60"))
+)
 
 # CORS middleware
 app.add_middleware(
@@ -85,6 +116,19 @@ async def startup_event():
             # Create all tables
             Base.metadata.create_all(bind=engine)
             logger.info("Database connected and tables ensured")
+
+            # Run seeders only in development mode
+            if os.getenv("ENVIRONMENT") == "development":
+                logger.info("Running database seeders...")
+                SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+                db = SessionLocal()
+                try:
+                    run_seeders(db)
+                except Exception as e:
+                    logger.error(f"Error running seeders: {e}")
+                finally:
+                    db.close()
+
             break
         except OperationalError as e:
             logger.warning(
@@ -106,7 +150,10 @@ async def shutdown_event():
 
 # Include routers
 app.include_router(health_router, prefix="/health", tags=["health"])
+app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
+app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
 app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
+app.include_router(user_router, prefix="/api/v1", tags=["users"])
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")

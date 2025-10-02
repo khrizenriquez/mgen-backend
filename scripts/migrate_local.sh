@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Script de migración para desarrollo local SIN virtual environment
-# ADVERTENCIA: Instala dependencias globalmente en el sistema
+# Script de migración para desarrollo local (WSL)
+# Equivalente a los comandos de Docker pero para ambiente local
 
 set -e
 
@@ -30,21 +30,10 @@ if [ ! -f "alembic.ini" ]; then
     exit 1
 fi
 
-# ADVERTENCIA sobre no usar venv
+# Verificar que el virtual environment está activo
 if [ -z "$VIRTUAL_ENV" ]; then
-    warning "⚠️  NO ESTÁS USANDO VIRTUAL ENVIRONMENT"
-    warning "Las dependencias se instalarán GLOBALMENTE en tu sistema"
-    warning "Esto puede causar conflictos con otros proyectos Python"
-    echo ""
-    read -p "¿Estás seguro de continuar sin venv? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "Cancelado. Para usar venv:"
-        echo "  python -m venv venv"
-        echo "  source venv/bin/activate"
-        echo "  ./scripts/migrate_local.sh"
-        exit 1
-    fi
+    error "Virtual environment no está activo. Ejecuta 'source venv/bin/activate' primero."
+    exit 1
 fi
 
 # Verificar que PostgreSQL está corriendo
@@ -100,14 +89,9 @@ case $ACTION in
     "status")
         log "Estado completo del sistema:"
         echo ""
-        echo "=== Python Environment ==="
+        echo "=== Virtual Environment ==="
+        echo "VIRTUAL_ENV: $VIRTUAL_ENV"
         echo "Python: $(which python)"
-        echo "Pip: $(which pip)"
-        if [ -n "$VIRTUAL_ENV" ]; then
-            echo "VIRTUAL_ENV: $VIRTUAL_ENV"
-        else
-            echo "⚠️  Sin virtual environment (instalación global)"
-        fi
         echo ""
         echo "=== PostgreSQL ==="
         sudo service postgresql status
@@ -119,18 +103,14 @@ case $ACTION in
         alembic current
         ;;
     "setup")
-        log "Configurando ambiente de desarrollo local SIN virtual environment..."
+        log "Configurando ambiente de desarrollo local..."
         
-        warning "⚠️  INSTALANDO DEPENDENCIAS GLOBALMENTE"
-        
-        # Verificar si las dependencias ya están instaladas
-        log "Verificando dependencias existentes..."
-        if python -c "import structlog, sqlalchemy, alembic, psycopg2" &>/dev/null; then
-            log "✅ Dependencias ya están instaladas"
-        else
-            log "Instalando dependencias globalmente..."
-            pip install -r requirements.txt
-        fi
+        # Verificar dependencias
+        log "Verificando dependencias..."
+        python -c "import structlog, sqlalchemy, alembic, psycopg2; print('✅ Todas las dependencias OK')" || {
+            error "Faltan dependencias. Ejecuta 'pip install -r requirements.txt'"
+            exit 1
+        }
         
         # Verificar .env
         if [ ! -f ".env" ]; then
@@ -157,32 +137,16 @@ case $ACTION in
         log "✅ Setup completado. Puedes ejecutar la aplicación con:"
         echo "    uvicorn app.main:app --reload"
         ;;
-    "install-deps")
-        warning "⚠️  INSTALANDO DEPENDENCIAS GLOBALMENTE"
-        log "Esto puede afectar otros proyectos Python en tu sistema"
-        read -p "¿Continuar? (y/N): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            pip install -r requirements.txt
-            log "Dependencias instaladas"
-        else
-            log "Instalación cancelada"
-        fi
-        ;;
     "help"|"-h"|"--help")
-        echo "Script de migración para desarrollo local SIN virtual environment"
-        echo ""
-        echo "⚠️  ADVERTENCIA: Este script instala dependencias globalmente"
-        echo "   Puede causar conflictos con otros proyectos Python"
+        echo "Script de migración para desarrollo local (WSL)"
         echo ""
         echo "Uso: $0 [COMANDO] [OPCIONES]"
         echo ""
         echo "Comandos disponibles:"
-        echo "  setup               - Configura el ambiente automáticamente (SIN venv)"
-        echo "  install-deps        - Instala dependencias globalmente"
-        echo "  upgrade [revisión]  - Ejecuta migraciones hacia adelante"
-        echo "  downgrade [revisión] - Ejecuta downgrade a revisión específica"
-        echo "  revision [mensaje]  - Crea nueva revisión con mensaje"
+        echo "  setup               - Configura el ambiente de desarrollo automáticamente"
+        echo "  upgrade [revisión]  - Ejecuta migraciones hacia adelante (default: head)"
+        echo "  downgrade [revisión] - Ejecuta downgrade a revisión específica (default: -1)"
+        echo "  revision [mensaje]  - Crea nueva revisión con mensaje (default: 'New migration')"
         echo "  current             - Muestra estado actual de migraciones"
         echo "  history             - Muestra historial de migraciones"
         echo "  stamp [revisión]    - Marca base de datos en revisión específica"
@@ -190,14 +154,15 @@ case $ACTION in
         echo "  help                - Muestra esta ayuda"
         echo ""
         echo "Prerequisitos:"
+        echo "  - Virtual environment activo: source venv/bin/activate"
         echo "  - PostgreSQL corriendo: sudo service postgresql start"
         echo "  - Base de datos creada: sudo -u postgres createdb donations_db"
-        echo "  - Dependencias instaladas: $0 install-deps"
         echo ""
-        echo "Recomendación: Usar virtual environment para evitar conflictos:"
-        echo "  python -m venv venv"
-        echo "  source venv/bin/activate"
-        echo "  ./scripts/migrate_local.sh"
+        echo "Ejemplos:"
+        echo "  $0 setup                      # Configura todo automáticamente"
+        echo "  $0 upgrade                    # Migra a la última versión"
+        echo "  $0 revision 'Add new table'   # Crea revisión con mensaje"
+        echo "  $0 status                     # Ver estado completo"
         ;;
     *)
         error "Comando desconocido: $ACTION"
@@ -205,5 +170,6 @@ case $ACTION in
         exit 1
         ;;
 esac
+
 
 

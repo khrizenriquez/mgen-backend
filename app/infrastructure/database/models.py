@@ -33,26 +33,53 @@ class StatusCatalogModel(Base):
         return f"<StatusCatalog(id={self.id}, code='{self.code}')>"
 
 
+class OrganizationModel(Base):
+    """
+    SQLAlchemy model for organization table
+    Manages organization information
+    """
+    __tablename__ = "organization"
+
+    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    name = Column(Text, nullable=False, unique=True, index=True)
+    description = Column(Text, nullable=True)
+    contact_email = Column(Text, nullable=True)
+    contact_phone = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    website = Column(Text, nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    # Relationships
+    users = relationship("UserModel", back_populates="organization")
+
+    def __repr__(self):
+        return f"<Organization(id={self.id}, name='{self.name}')>"
+
+
 class UserModel(Base):
     """
     SQLAlchemy model for users table
     Manages user authentication and identity
     """
     __tablename__ = "app_user"
-    
+
     id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     email = Column(Text, nullable=False, unique=True, index=True)
     password_hash = Column(Text, nullable=False)
     email_verified = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    organization_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('organization.id'), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    
+
     # Relationships
     donations = relationship("DonationModel", back_populates="user")
     user_roles = relationship("UserRoleModel", back_populates="user", cascade="all, delete-orphan")
     donor_contact = relationship("DonorContactModel", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    
+    organization = relationship("OrganizationModel", back_populates="users")
+
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}')>"
 
@@ -224,3 +251,21 @@ class DonorContactModel(Base):
     
     def __repr__(self):
         return f"<DonorContact(user_id={self.user_id}, preference='{self.contact_preference}')>"
+
+
+class SimpleUserModel(Base):
+    """
+    Simple User model for CRUD POC
+    """
+    __tablename__ = "simple_users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    
+    def __repr__(self):
+        return f"<SimpleUser(id={self.id}, email='{self.email}', name='{self.first_name} {self.last_name}')>"
