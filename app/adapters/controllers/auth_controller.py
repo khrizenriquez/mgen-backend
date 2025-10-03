@@ -189,7 +189,7 @@ async def verify_email(
 @router.post("/change-password", response_model=GenericResponse)
 async def change_password(
     request: PasswordChangeRequest,
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
@@ -217,7 +217,7 @@ async def change_password(
 
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
@@ -237,7 +237,7 @@ async def get_dashboard(
 
 @router.get("/me")
 async def get_current_user_info(
-    current_user: UserModel = Depends(get_current_active_user)
+    current_user = Depends(get_current_active_user)
 ):
     """
     Get current user information
@@ -265,7 +265,7 @@ async def get_current_user_info(
 
 @router.post("/upgrade-to-donor", response_model=GenericResponse)
 async def upgrade_to_donor(
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
@@ -289,7 +289,7 @@ async def upgrade_to_donor(
 # Admin-only endpoints
 @router.get("/admin/users", response_model=UserListResponse)
 async def get_all_users(
-    current_user: UserModel = Depends(require_admin),
+    current_user = Depends(require_role("ADMIN")),
     db: Session = Depends(get_db),
     skip: int = 0,
     limit: int = 100

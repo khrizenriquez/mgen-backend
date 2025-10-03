@@ -59,7 +59,7 @@ def get_current_user(
     return user
 
 
-def get_current_active_user(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+def get_current_active_user(current_user = Depends(get_current_user)):
     """Get current active user (alias for get_current_user)"""
     return current_user
 
@@ -69,7 +69,7 @@ def get_user_roles(user: UserModel) -> List[str]:
     return [user_role.role.name for user_role in user.user_roles]
 
 
-def require_admin(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+def require_admin(current_user = Depends(get_current_user)):
     """Require admin role"""
     user_roles = get_user_roles(current_user)
     if "ADMIN" not in user_roles:
@@ -80,7 +80,7 @@ def require_admin(current_user: UserModel = Depends(get_current_user)) -> UserMo
     return current_user
 
 
-def require_organization(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+def require_organization(current_user = Depends(get_current_user)):
     """Require organization or admin role"""
     user_roles = get_user_roles(current_user)
     if "ADMIN" not in user_roles and "ORGANIZATION" not in user_roles:
@@ -91,7 +91,7 @@ def require_organization(current_user: UserModel = Depends(get_current_user)) ->
     return current_user
 
 
-def require_auditor(current_user: UserModel = Depends(get_current_user)) -> UserModel:
+def require_auditor(current_user = Depends(get_current_user)):
     """Require auditor, organization or admin role"""
     user_roles = get_user_roles(current_user)
     if not any(role in user_roles for role in ["ADMIN", "ORGANIZATION", "AUDITOR"]):
@@ -105,7 +105,7 @@ def require_auditor(current_user: UserModel = Depends(get_current_user)) -> User
 def require_role(required_role: str):
     """Dependency factory to require specific role"""
     def role_checker(
-        current_user: UserModel = Depends(get_current_user),
+        current_user = Depends(get_current_user),
         user_roles: List[str] = Depends(get_user_roles)
     ):
         if required_role not in user_roles:
@@ -120,7 +120,7 @@ def require_role(required_role: str):
 def require_any_role(*required_roles: str):
     """Dependency factory to require any of the specified roles"""
     def role_checker(
-        current_user: UserModel = Depends(get_current_user),
+        current_user = Depends(get_current_user),
         user_roles: List[str] = Depends(get_user_roles)
     ):
         if not any(role in user_roles for role in required_roles):
@@ -135,7 +135,7 @@ def require_any_role(*required_roles: str):
 def get_optional_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
-) -> Optional[UserModel]:
+) -> Optional:
     """Get current user if token is provided, None otherwise"""
     if credentials is None:
         return None

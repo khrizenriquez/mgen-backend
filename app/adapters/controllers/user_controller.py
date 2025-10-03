@@ -39,7 +39,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 @router.post("/", response_model=UserResponse, status_code=201)
 async def create_user(
     user_data: UserCreate,
-    current_user: UserModel = Depends(require_role("ADMIN")),
+    current_user = Depends(require_role("ADMIN")),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -61,7 +61,7 @@ async def create_user(
 
 @router.get("/", response_model=UserListResponse)
 async def get_users(
-    current_user: UserModel = Depends(require_organization),
+    current_user = Depends(require_role("ORGANIZATION")),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
     user_service: UserService = Depends(get_user_service)
@@ -100,7 +100,7 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserInfo)
 async def get_user(
     user_id: int,
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -135,7 +135,7 @@ async def get_user(
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
