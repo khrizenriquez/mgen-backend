@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import sys
+import subprocess
 from pathlib import Path
 
 # Validate configuration before starting
