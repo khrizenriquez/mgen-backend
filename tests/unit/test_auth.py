@@ -155,6 +155,15 @@ class TestAuthService:
         assert exc_info.value.status_code == 400
         assert "disabled" in str(exc_info.value.detail)
 
+    def test_logout_user(self, auth_service, mock_db):
+        """Test user logout"""
+        # Mock user
+        mock_user = Mock()
+        mock_user.email = "test@example.com"
+
+        result = auth_service.logout_user(mock_user)
+        assert result == "Logged out successfully"
+
 
 class TestSecurityValidation:
     """Test security validations"""

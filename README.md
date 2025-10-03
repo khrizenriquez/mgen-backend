@@ -437,6 +437,7 @@ POST /api/v1/auth/verify-email      # Verificar email con token
 GET  /api/v1/auth/dashboard         # Dashboard personalizado por rol
 GET  /api/v1/auth/me                # Información del usuario actual
 POST /api/v1/auth/change-password   # Cambiar contraseña
+POST /api/v1/auth/logout            # Cerrar sesión
 POST /api/v1/auth/refresh           # Refresh token de acceso
 
 # Solo ADMIN
@@ -504,6 +505,56 @@ SMTP_PASSWORD=your-app-password
 FROM_EMAIL=your-email@gmail.com
 FRONTEND_URL=http://localhost:3000
 ```
+
+## 🚀 Despliegue en Producción
+
+### Backend - Railway
+
+El backend está configurado para desplegarse automáticamente en Railway:
+
+1. **Conexión del Repositorio**: Conecta tu repositorio de GitHub a Railway
+2. **Variables de Entorno**: Configura los secrets en Railway:
+   - `JWT_SECRET_KEY`: Clave secreta para JWT (genera una segura)
+   - `DATABASE_URL`: Proporcionada automáticamente por Railway
+   - `SMTP_*`: Configuración de email para notificaciones
+   - `FRONTEND_URL`: URL de tu frontend en Netlify
+
+3. **Despliegue Automático**: Cada push a `main` activa el CI/CD y despliega automáticamente
+
+### Frontend - Netlify
+
+Para el frontend (repositorio separado):
+
+1. **Conectar Repositorio**: Conecta el repo del frontend a Netlify
+2. **Variables de Entorno**:
+   - `VITE_API_URL`: URL del backend en Railway
+   - `VITE_APP_ENV`: "production"
+
+3. **Build Settings**:
+   - Build command: `npm run build`
+   - Publish directory: `dist`
+
+### CI/CD con GitHub Actions
+
+El proyecto incluye pipelines automatizados:
+
+- **Tests**: Ejecuta tests y coverage en cada PR
+- **Build**: Construye imagen Docker y sube a GitHub Container Registry
+- **Deploy**: Despliega automáticamente a Railway en pushes a `main`
+
+### Secrets Requeridos
+
+#### GitHub Secrets (para CI/CD):
+- `RAILWAY_API_TOKEN`: Token de API de Railway
+- `RAILWAY_ENVIRONMENT_ID`: ID del environment de producción
+
+#### Railway Secrets:
+- `JWT_SECRET_KEY`: Clave segura para tokens JWT
+- `SMTP_SERVER`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`: Configuración email
+- `FRONTEND_URL`: URL del frontend en producción
+
+#### Netlify Secrets:
+- `VITE_API_URL`: URL del backend desplegado
 
 ## 🏗️ Arquitectura
 

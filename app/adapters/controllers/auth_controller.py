@@ -214,6 +214,27 @@ async def change_password(
         )
 
 
+@router.post("/logout", response_model=GenericResponse)
+async def logout_user(
+    current_user = Depends(get_current_active_user),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Log out current user
+
+    Removes user session on server side. Client should also remove stored tokens.
+    """
+    try:
+        result = auth_service.logout_user(current_user)
+        return GenericResponse(message=result)
+    except Exception as e:
+        logger.error(f"Logout failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Logout failed"
+        )
+
+
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
     current_user = Depends(get_current_active_user),
@@ -244,7 +265,7 @@ async def get_current_user_info(
     Requires authentication.
     """
     try:
-        roles = [role.name for role in current_user.user_roles]
+        roles = [user_role.role.name for user_role in current_user.user_roles]
         return {
             "id": str(current_user.id),
             "email": current_user.email,
