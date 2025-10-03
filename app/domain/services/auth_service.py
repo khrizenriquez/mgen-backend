@@ -419,3 +419,16 @@ class AuthService:
         })
 
         return activity[:10]  # Limit to 10 items
+
+    def get_all_users(self, skip: int = 0, limit: int = 100) -> List[UserInfo]:
+        """Get all users for admin"""
+        users = self.db.query(UserModel).offset(skip).limit(limit).all()
+        return [UserInfo(
+            id=user.id,
+            email=user.email,
+            email_verified=user.email_verified,
+            is_active=user.is_active,
+            roles=[user_role.role.name for user_role in user.user_roles],
+            created_at=user.created_at,
+            updated_at=user.updated_at
+        ) for user in users]

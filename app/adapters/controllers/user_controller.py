@@ -18,9 +18,8 @@ from app.domain.services.user_service import UserService
 from app.infrastructure.database.user_repository_impl import UserRepositoryImpl
 from app.infrastructure.database.database import get_db
 from app.infrastructure.auth.dependencies import (
-    get_current_active_user, require_admin, require_organization, require_any_role, user_to_user_info
+    get_current_active_user, require_role, require_admin, require_organization, require_any_role, user_to_user_info
 )
-from app.infrastructure.database.models import UserModel
 
 
 router = APIRouter(
@@ -175,4 +174,26 @@ async def update_user(
         created_at=getattr(updated_user, 'created_at', None),
         updated_at=getattr(updated_user, 'updated_at', None)
     )
+
+
+@router.delete("/{user_id}")
+async def delete_user(
+    user_id: int,
+    current_user = Depends(require_role("ADMIN")),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Delete user by ID
+
+    Requires ADMIN role.
+    """
+    # Prevent users from deleting themselves
+    if str(current_user.id) == str(user_id):
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account"
+        )
+
+    result = await user_service.delete_user(user_id)
+    return result
 

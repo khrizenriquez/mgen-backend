@@ -14,6 +14,9 @@ from app.infrastructure.auth.dependencies import (
     get_current_active_user, require_admin, require_organization, require_auditor, require_any_role
 )
 from app.infrastructure.database.models import UserModel
+from app.adapters.schemas.donation_schemas import (
+    DonationCreateRequest, DonationResponse, DonationUpdateRequest
+)
 
 logger = get_logger(__name__)
 router = APIRouter()
@@ -242,6 +245,260 @@ async def get_donation_statistics(
     except Exception as e:
         logger.error(
             "Error getting donation statistics",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/donations", response_model=None)
+async def create_donation(
+    donation_data: DonationCreateRequest,
+    current_user = Depends(get_current_active_user),
+    repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
+):
+    """Create a new donation
+
+    Requires authentication. Anyone can create a donation.
+    """
+    try:
+        logger.info(
+            "Creating donation",
+            user_email=current_user.email,
+            donor_email=donation_data.donor_email,
+            amount=donation_data.amount
+        )
+
+        # For now, we'll create a basic donation record
+        # In a real implementation, this would integrate with payment processing
+        from app.domain.entities.donation import Donation, DonationType
+        from datetime import datetime
+
+        now = datetime.utcnow()
+        donation = Donation(
+            id=None,
+            amount_gtq=donation_data.amount,
+            status_id=1,  # PENDING
+            donor_email=donation_data.donor_email,
+            donor_name=donation_data.donor_name,
+            donor_nit=None,
+            user_id=current_user.id if hasattr(current_user, 'id') else None,
+            payu_order_id=None,
+            reference_code=f"REF-{now.strftime('%Y%m%d%H%M%S')}",
+            correlation_id=f"CORR-{now.strftime('%Y%m%d%H%M%S')}",
+            created_at=now,
+            updated_at=now,
+            paid_at=None
+        )
+
+        created_donation = await repository.create(donation)
+
+        logger.info(
+            "Donation created successfully",
+            donation_id=str(created_donation.id),
+            reference_code=created_donation.reference_code
+        )
+
+        return {
+            "id": str(created_donation.id),
+            "amount_gtq": float(created_donation.amount_gtq),
+            "status_id": created_donation.status_id,
+            "donor_email": created_donation.donor_email,
+            "donor_name": created_donation.donor_name,
+            "reference_code": created_donation.reference_code,
+            "correlation_id": created_donation.correlation_id,
+            "created_at": created_donation.created_at.isoformat(),
+            "updated_at": created_donation.updated_at.isoformat()
+        }
+
+    except Exception as e:
+        logger.error(
+            "Error creating donation",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/donations/{donation_id}")
+async def get_donation(
+    donation_id: str,
+    current_user = Depends(get_current_active_user),
+    repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
+):
+    """Get a specific donation by ID
+
+    Requires authentication. Users can only view their own donations unless they are admin/organization/auditor.
+    """
+    try:
+        from uuid import UUID
+        donation_uuid = UUID(donation_id)
+
+        logger.info(
+            "Fetching donation by ID",
+            user_email=current_user.email,
+            donation_id=donation_id
+        )
+
+        donation = await repository.get_by_id(donation_uuid)
+        if not donation:
+            raise HTTPException(status_code=404, detail="Donation not found")
+
+        # Check permissions
+        user_roles = [role.name for role in current_user.user_roles]
+        is_admin = "ADMIN" in user_roles
+        is_organization = "ORGANIZATION" in user_roles
+        is_auditor = "AUDITOR" in user_roles
+
+        # Users can only see their own donations unless they have elevated roles
+        if not (is_admin or is_organization or is_auditor):
+            if donation.user_id != current_user.id:
+                raise HTTPException(
+                    status_code=403,
+                    detail="You can only access your own donations"
+                )
+
+        logger.info(
+            "Donation retrieved successfully",
+            donation_id=donation_id
+        )
+
+        return {
+            "id": str(donation.id),
+            "amount_gtq": float(donation.amount_gtq),
+            "status_id": donation.status_id,
+            "status_name": donation.status.name,
+            "donor_email": donation.donor_email,
+            "donor_name": donation.donor_name,
+            "donor_nit": donation.donor_nit,
+            "reference_code": donation.reference_code,
+            "correlation_id": donation.correlation_id,
+            "created_at": donation.created_at.isoformat(),
+            "updated_at": donation.updated_at.isoformat(),
+            "paid_at": donation.paid_at.isoformat() if donation.paid_at else None,
+            "formatted_amount": donation.formatted_amount
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Error getting donation",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.put("/donations/{donation_id}")
+async def update_donation(
+    donation_id: str,
+    donation_data: DonationUpdateRequest,
+    current_user = Depends(require_admin),  # Only admins can update donations
+    repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
+):
+    """Update a donation
+
+    Requires ADMIN role.
+    """
+    try:
+        from uuid import UUID
+        donation_uuid = UUID(donation_id)
+
+        logger.info(
+            "Updating donation",
+            user_email=current_user.email,
+            donation_id=donation_id
+        )
+
+        donation = await repository.get_by_id(donation_uuid)
+        if not donation:
+            raise HTTPException(status_code=404, detail="Donation not found")
+
+        # Update fields if provided
+        if donation_data.description is not None:
+            # Note: The current model doesn't have description field
+            # This would need to be added to the model if needed
+            pass
+
+        # For now, we'll just update the updated_at timestamp
+        from datetime import datetime
+        donation.updated_at = datetime.utcnow()
+
+        updated_donation = await repository.update(donation)
+
+        logger.info(
+            "Donation updated successfully",
+            donation_id=donation_id
+        )
+
+        return {
+            "id": str(updated_donation.id),
+            "amount_gtq": float(updated_donation.amount_gtq),
+            "status_id": updated_donation.status_id,
+            "status_name": updated_donation.status.name,
+            "donor_email": updated_donation.donor_email,
+            "donor_name": updated_donation.donor_name,
+            "donor_nit": updated_donation.donor_nit,
+            "reference_code": updated_donation.reference_code,
+            "correlation_id": updated_donation.correlation_id,
+            "created_at": updated_donation.created_at.isoformat(),
+            "updated_at": updated_donation.updated_at.isoformat(),
+            "paid_at": updated_donation.paid_at.isoformat() if updated_donation.paid_at else None,
+            "formatted_amount": updated_donation.formatted_amount
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Error updating donation",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.delete("/donations/{donation_id}")
+async def delete_donation(
+    donation_id: str,
+    current_user = Depends(require_admin),  # Only admins can delete donations
+    repository: SQLAlchemyDonationRepository = Depends(get_donation_repository)
+):
+    """Delete a donation
+
+    Requires ADMIN role.
+    """
+    try:
+        from uuid import UUID
+        donation_uuid = UUID(donation_id)
+
+        logger.info(
+            "Deleting donation",
+            user_email=current_user.email,
+            donation_id=donation_id
+        )
+
+        deleted = await repository.delete(donation_uuid)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Donation not found")
+
+        logger.info(
+            "Donation deleted successfully",
+            donation_id=donation_id
+        )
+
+        return {"message": "Donation deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(
+            "Error deleting donation",
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True

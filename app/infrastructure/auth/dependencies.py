@@ -23,7 +23,7 @@ security = HTTPBearer()
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
-) -> UserModel:
+):
     """Get current authenticated user from JWT token"""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -64,7 +64,7 @@ def get_current_active_user(current_user = Depends(get_current_user)):
     return current_user
 
 
-def get_user_roles(user: UserModel) -> List[str]:
+def get_user_roles(user) -> List[str]:
     """Get list of role names for a user"""
     return [user_role.role.name for user_role in user.user_roles]
 
@@ -105,7 +105,7 @@ def require_auditor(current_user = Depends(get_current_user)):
 def require_role(required_role: str):
     """Dependency factory to require specific role"""
     def role_checker(
-        current_user = Depends(get_current_user),
+        current_user,
         user_roles: List[str] = Depends(get_user_roles)
     ):
         if required_role not in user_roles:

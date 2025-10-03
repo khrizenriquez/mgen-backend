@@ -16,7 +16,6 @@ from app.infrastructure.auth.dependencies import (
     get_current_active_user, get_optional_current_user, require_role, require_any_role, user_to_user_info,
     require_admin, require_organization, require_auditor
 )
-from app.infrastructure.database.models import UserModel
 from app.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
@@ -36,7 +35,7 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
 @router.post("/register", response_model=GenericResponse, status_code=status.HTTP_201_CREATED)
 async def register_user(
     user_data: UserRegister,
-    current_user: Optional[UserModel] = Depends(get_optional_current_user),
+    current_user = Depends(get_optional_current_user),
     auth_service: AuthService = Depends(get_auth_service)
 ):
     """
@@ -287,31 +286,30 @@ async def upgrade_to_donor(
 
 
 # Admin-only endpoints
-@router.get("/admin/users", response_model=UserListResponse)
-async def get_all_users(
-    current_user = Depends(require_role("ADMIN")),
-    db: Session = Depends(get_db),
-    skip: int = 0,
-    limit: int = 100
-):
-    """
-    Get all users (Admin only)
-
-    Requires ADMIN role.
-    """
-    try:
-        users = db.query(UserModel).offset(skip).limit(limit).all()
-        user_infos = [user_to_user_info(user) for user in users]
-
-        return UserListResponse(
-            users=user_infos,
-            total=len(users),
-            skip=skip,
-            limit=limit
-        )
-    except Exception as e:
-        logger.error(f"Get all users failed: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get users"
-        )
+# TODO: Fix FastAPI compatibility issue with UserModel
+# @router.get("/admin/users", response_model=UserListResponse)
+# async def get_all_users(
+#     current_user = Depends(require_role("ADMIN")),
+#     auth_service: AuthService = Depends(get_auth_service),
+#     skip: int = 0,
+#     limit: int = 100
+# ) -> UserListResponse:
+#     """
+#     Get all users (Admin only)
+#
+#     Requires ADMIN role.
+#     """
+#     try:
+#         users = auth_service.get_all_users(skip=skip, limit=limit)
+#         return UserListResponse(
+#             users=users,
+#             total=len(users),
+#             skip=skip,
+#             limit=limit
+#         )
+#     except Exception as e:
+#         logger.error(f"Get all users failed: {e}", exc_info=True)
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail="Failed to get users"
+#         )

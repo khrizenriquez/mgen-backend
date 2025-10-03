@@ -154,7 +154,7 @@ app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
 app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
 app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
-app.include_router(user_router, prefix="/api/v1", tags=["users"])
+# app.include_router(user_router, prefix="/api/v1", tags=["users"])
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")
