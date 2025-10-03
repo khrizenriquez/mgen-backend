@@ -39,6 +39,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 @router.post("/", response_model=UserResponse, status_code=201)
 async def create_user(
     user_data: UserCreate,
+    current_user: UserModel = Depends(require_role("ADMIN")),
     user_service: UserService = Depends(get_user_service)
 ):
     """
