@@ -176,19 +176,3 @@ async def update_user(
         updated_at=getattr(updated_user, 'updated_at', None)
     )
 
-
-@router.delete("/{user_id}", response_model=DeleteResponse)
-async def delete_user(
-    user_id: int,
-    current_user: UserModel = Depends(require_organization),
-    user_service: UserService = Depends(get_user_service)
-):
-    """
-    Delete user by ID (Admin/Organization only)
-
-    - ADMIN: Can delete any user
-    - ORGANIZATION: Can delete users in their organization (TODO: implement organization filtering)
-
-    - **user_id**: The ID of the user to delete
-    """
-    return await user_service.delete_user(user_id)
