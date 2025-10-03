@@ -36,6 +36,30 @@ python scripts/validate_config.py
 
 **La validación se ejecuta automáticamente al iniciar la aplicación.**
 
+### Validación de Seguridad
+
+Además de la validación de configuración, incluye un script de pruebas de seguridad:
+
+```bash
+# Ejecutar pruebas de seguridad
+python scripts/security_test.py
+```
+
+Este script valida:
+- ✅ Restricciones de creación de usuarios por roles
+- ✅ Protección de endpoints que requieren autenticación
+- ✅ Prevención de escalada de privilegios
+
+### 🔐 Características de Seguridad Implementadas
+
+- **Autenticación JWT** completa con access y refresh tokens
+- **Control de acceso basado en roles** (ADMIN, ORGANIZATION, AUDITOR, DONOR, USER)
+- **Validación de roles** en creación de usuarios para prevenir escalada de privilegios
+- **Rate limiting** básico (10 requests/minuto)
+- **Protección automática** de endpoints sensibles
+- **Validación de configuración** al inicio
+- **Scripts de pruebas de seguridad** automatizadas
+
 ### Variables de Entorno Requeridas
 
 Antes de ejecutar la aplicación, configura las siguientes variables de entorno críticas para seguridad:
