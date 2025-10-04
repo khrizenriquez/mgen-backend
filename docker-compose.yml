@@ -22,6 +22,12 @@ services:
       - RATE_LIMIT_WINDOW=60
       # Default user password (only for development)
       - DEFAULT_USER_PASSWORD=seminario123
+      # Mailjet email service
+      - MAILJET_API_KEY=51c706379da941d218a704ead2eca4ab
+      - MAILJET_API_SECRET=f8642fb6a5e3789fc101550759486f74
+      - FROM_EMAIL=noreply@donacionesgt.org
+      - FROM_NAME=Sistema de Donaciones
+      - FRONTEND_URL=http://localhost:3000
     depends_on:
       db:
         condition: service_healthy
