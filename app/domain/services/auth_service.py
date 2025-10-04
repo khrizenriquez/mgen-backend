@@ -44,8 +44,13 @@ class AuthService:
         # Validate role permissions
         requested_role = user_data.role.upper()
 
-        # Only ADMIN can create ADMIN, ORGANIZATION, or AUDITOR roles
+        # Define roles that require admin privileges
         admin_only_roles = {"ADMIN", "ORGANIZATION", "AUDITOR"}
+        
+        # Public roles that can be self-registered
+        public_roles = {"USER", "DONOR"}
+
+        # Only ADMIN can create ADMIN, ORGANIZATION, or AUDITOR roles
         if requested_role in admin_only_roles:
             if not current_user:
                 raise HTTPException(
@@ -59,6 +64,13 @@ class AuthService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Only administrators can create users with elevated roles"
                 )
+        
+        # Validate that the requested role exists and is either public or user is admin
+        elif requested_role not in public_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {requested_role}. Public registration only allows USER or DONOR roles."
+            )
 
         # Get role
         role = self.db.query(RoleModel).filter(

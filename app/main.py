@@ -26,7 +26,7 @@ else:
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
 import time
 import logging
@@ -42,6 +42,10 @@ from app.infrastructure.database.database import engine, Base
 from app.infrastructure.database.seeders import run_seeders
 from app.infrastructure.logging import setup_logging, get_logger, LoggingMiddleware
 from app.infrastructure.middleware.rate_limit import RateLimitMiddleware
+from app.infrastructure.monitoring import (
+    REQUEST_COUNT, REQUEST_DURATION, USER_REGISTRATION_COUNT,
+    LOGIN_ATTEMPTS, DONATION_COUNT, ACTIVE_USERS, DATABASE_CONNECTIONS
+)
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
@@ -49,24 +53,6 @@ from sqlalchemy.orm import sessionmaker
 # Setup structured logging
 setup_logging()
 logger = get_logger(__name__)
-
-# Prometheus metrics
-REQUEST_COUNT = Counter('donations_requests_total', 'Total requests', ['method', 'endpoint'])
-REQUEST_DURATION = Histogram('donations_request_duration_seconds', 'Request duration')
-
-# Business metrics
-USER_REGISTRATION_COUNT = Counter('user_registrations_total', 'Total user registrations', ['role'])
-LOGIN_ATTEMPTS = Counter('login_attempts_total', 'Total login attempts', ['success'])
-DONATION_COUNT = Counter('donations_created_total', 'Total donations created', ['status'])
-ACTIVE_USERS = Gauge('active_users_current', 'Current active users')
-DATABASE_CONNECTIONS = Gauge('database_connections_active', 'Active database connections')
-
-# Business metrics
-DONATION_COUNT = Counter('donations_created_total', 'Total donations created', ['status', 'organization_id'])
-USER_REGISTRATION_COUNT = Counter('user_registrations_total', 'Total user registrations', ['role'])
-LOGIN_ATTEMPTS = Counter('login_attempts_total', 'Total login attempts', ['success'])
-ACTIVE_USERS = Gauge('active_users', 'Number of active users')
-DATABASE_CONNECTIONS = Gauge('database_connections_active', 'Active database connections')
 
 # Create FastAPI app
 app = FastAPI(

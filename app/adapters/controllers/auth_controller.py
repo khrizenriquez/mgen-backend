@@ -18,7 +18,7 @@ from app.infrastructure.auth.dependencies import (
 )
 from app.infrastructure.database.models import UserModel
 from app.infrastructure.logging import get_logger
-from app.main import USER_REGISTRATION_COUNT, LOGIN_ATTEMPTS
+from app.infrastructure.monitoring import USER_REGISTRATION_COUNT, LOGIN_ATTEMPTS
 
 logger = get_logger(__name__)
 
@@ -51,8 +51,9 @@ async def register_user(
         user = auth_service.register_user(user_data, current_user)
         logger.info(f"User registered successfully: {user.email}")
 
-        # Update metrics
-        USER_REGISTRATION_COUNT.labels(role=user.role.name if user.role else 'USER').inc()
+        # Update metrics - get role from user_roles relationship
+        user_role_name = user.user_roles[0].role.name if user.user_roles else 'USER'
+        USER_REGISTRATION_COUNT.labels(role=user_role_name).inc()
 
         return GenericResponse(message="User registered successfully. Please check your email for verification.")
 

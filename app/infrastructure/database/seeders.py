@@ -55,9 +55,6 @@ def seed_default_users(db: Session) -> None:
     seed_roles(db)
     seed_organization(db)
 
-    default_password = "seminario123"
-    hashed_password = get_password_hash(default_password)
-
     # Get roles
     admin_role = db.query(RoleModel).filter(RoleModel.name == "ADMIN").first()
     donor_role = db.query(RoleModel).filter(RoleModel.name == "DONOR").first()
@@ -67,9 +64,18 @@ def seed_default_users(db: Session) -> None:
         logger.error("Required roles not found, skipping user seeding")
         return
 
-    # Get default password from environment
+    # Get default password from environment and ensure it's within bcrypt limits (72 bytes)
     default_password = os.getenv("DEFAULT_USER_PASSWORD", "seminario123")
-    hashed_password = get_password_hash(default_password)
+    # Truncate password to 72 bytes if necessary (bcrypt limit)
+    if len(default_password.encode('utf-8')) > 72:
+        logger.warning(f"Password is longer than 72 bytes, truncating")
+        default_password = default_password[:72]
+    
+    try:
+        hashed_password = get_password_hash(default_password)
+    except Exception as e:
+        logger.error(f"Failed to hash password: {e}")
+        return
 
     # Default users data
     default_users = [

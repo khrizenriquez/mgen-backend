@@ -16,8 +16,11 @@ from app.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
-# Security scheme
+# Security scheme for required authentication
 security = HTTPBearer()
+
+# Security scheme for optional authentication (doesn't auto-error)
+optional_security = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -133,7 +136,7 @@ def require_any_role(*required_roles: str):
 
 
 def get_optional_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
     db: Session = Depends(get_db)
 ) -> Optional[UserModel]:
     """Get current user if token is provided, None otherwise"""
