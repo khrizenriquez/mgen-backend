@@ -54,6 +54,13 @@ logger = get_logger(__name__)
 REQUEST_COUNT = Counter('donations_requests_total', 'Total requests', ['method', 'endpoint'])
 REQUEST_DURATION = Histogram('donations_request_duration_seconds', 'Request duration')
 
+# Business metrics
+DONATION_COUNT = Counter('donations_created_total', 'Total donations created', ['status', 'organization_id'])
+USER_REGISTRATION_COUNT = Counter('user_registrations_total', 'Total user registrations', ['role'])
+LOGIN_ATTEMPTS = Counter('login_attempts_total', 'Total login attempts', ['success'])
+ACTIVE_USERS = Gauge('active_users', 'Number of active users')
+DATABASE_CONNECTIONS = Gauge('database_connections_active', 'Active database connections')
+
 # Create FastAPI app
 app = FastAPI(
     title="Donations Management System",
@@ -116,6 +123,15 @@ async def startup_event():
             # Create all tables
             Base.metadata.create_all(bind=engine)
             logger.info("Database connected and tables ensured")
+
+            # Update database connections metric
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"))
+                    active_connections = result.fetchone()[0]
+                    DATABASE_CONNECTIONS.set(active_connections)
+            except Exception as e:
+                logger.warning(f"Could not update database connections metric: {e}")
 
             # Run seeders only in development mode
             if os.getenv("ENVIRONMENT") == "development":
