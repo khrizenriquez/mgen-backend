@@ -2,26 +2,28 @@
 Email service for sending notifications and password resets
 """
 import os
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import Optional
 
+from mailjet_rest import Client
 from app.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class EmailService:
-    """Service for sending emails"""
+    """Service for sending emails via Mailjet API"""
 
     def __init__(self):
-        self.smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_username = os.getenv("SMTP_USERNAME")
-        self.smtp_password = os.getenv("SMTP_PASSWORD")
-        self.from_email = os.getenv("FROM_EMAIL", self.smtp_username)
-        self.use_tls = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+        self.api_key = os.getenv("MAILJET_API_KEY")
+        self.api_secret = os.getenv("MAILJET_API_SECRET")
+        self.from_email = os.getenv("FROM_EMAIL", "noreply@donacionesgt.org")
+        self.from_name = os.getenv("FROM_NAME", "Sistema de Donaciones")
+
+        if self.api_key and self.api_secret:
+            self.mailjet = Client(auth=(self.api_key, self.api_secret))
+        else:
+            self.mailjet = None
+            logger.warning("Mailjet API credentials not configured")
 
     def send_email(
         self,
@@ -43,32 +45,44 @@ class EmailService:
             bool: True if email was sent successfully
         """
         try:
-            # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = subject
-            msg['From'] = self.from_email
-            msg['To'] = to_email
+            if not self.mailjet:
+                logger.error("Mailjet client not initialized - check API credentials")
+                return False
 
-            # Add text content
+            data = {
+                'Messages': [
+                    {
+                        "From": {
+                            "Email": self.from_email,
+                            "Name": self.from_name
+                        },
+                        "To": [
+                            {
+                                "Email": to_email
+                            }
+                        ],
+                        "Subject": subject,
+                        "HTMLPart": html_content,
+                    }
+                ]
+            }
+
             if text_content:
-                msg.attach(MIMEText(text_content, 'plain'))
+                data['Messages'][0]['TextPart'] = text_content
 
-            # Add HTML content
-            msg.attach(MIMEText(html_content, 'html'))
+            result = self.mailjet.send.create(data=data)
 
-            # Send email
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            if self.use_tls:
-                server.starttls()
-
-            if self.smtp_username and self.smtp_password:
-                server.login(self.smtp_username, self.smtp_password)
-
-            server.sendmail(self.from_email, to_email, msg.as_string())
-            server.quit()
-
-            logger.info(f"Email sent successfully to: {to_email}")
-            return True
+            if result.status_code == 200:
+                response_data = result.json()
+                if response_data.get('Messages', [{}])[0].get('Status') == 'success':
+                    logger.info(f"Email sent successfully to: {to_email}")
+                    return True
+                else:
+                    logger.error(f"Mailjet reported failure for {to_email}: {response_data}")
+                    return False
+            else:
+                logger.error(f"Mailjet API error for {to_email}: {result.status_code} - {result.text}")
+                return False
 
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {e}", exc_info=True)

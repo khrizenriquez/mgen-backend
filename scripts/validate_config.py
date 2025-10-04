@@ -46,11 +46,11 @@ def validate_configuration():
         else:
             print(f"✅ {var_name}: {value}")
 
-    # Email configuration (optional but recommended for production)
-    email_vars = ['SMTP_SERVER', 'SMTP_USERNAME', 'SMTP_PASSWORD', 'FROM_EMAIL']
+    # Email configuration (Mailjet - required for production)
+    email_vars = ['MAILJET_API_KEY', 'MAILJET_API_SECRET', 'FROM_EMAIL']
     email_configured = all(os.getenv(var) for var in email_vars)
 
-    print("\n📧 Checking EMAIL configuration:")
+    print("\n📧 Checking EMAIL configuration (Mailjet):")
     if email_configured:
         print("✅ Email service: Fully configured")
     else:

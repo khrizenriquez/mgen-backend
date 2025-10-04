@@ -48,12 +48,11 @@ JWT_SECRET_KEY=your-super-secure-jwt-secret-key-here
 RATE_LIMIT_REQUESTS=10
 RATE_LIMIT_WINDOW=60
 
-# Email Configuration (opcional para desarrollo)
-SMTP_SERVER=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USERNAME=your-email@gmail.com
-SMTP_PASSWORD=your-app-password
-FROM_EMAIL=your-email@gmail.com
+# Email Configuration (Mailjet - requerido para producción)
+MAILJET_API_KEY=your-mailjet-api-key
+MAILJET_API_SECRET=your-mailjet-api-secret
+FROM_EMAIL=noreply@donacionesgt.org
+FROM_NAME=Sistema de Donaciones
 FRONTEND_URL=http://localhost:3000
 
 # Default User Password (solo para desarrollo)
