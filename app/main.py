@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import sys
+import subprocess
 from pathlib import Path
 
 # Validate configuration before starting
@@ -44,7 +45,6 @@ from app.infrastructure.middleware.rate_limit import RateLimitMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
-import subprocess
 
 # Setup structured logging
 setup_logging()
