@@ -18,9 +18,8 @@ from app.domain.services.user_service import UserService
 from app.infrastructure.database.user_repository_impl import UserRepositoryImpl
 from app.infrastructure.database.database import get_db
 from app.infrastructure.auth.dependencies import (
-    get_current_active_user, require_admin, require_organization, require_any_role, user_to_user_info
+    get_current_active_user, require_role, require_admin, require_organization, require_any_role, user_to_user_info
 )
-from app.infrastructure.database.models import UserModel
 
 
 router = APIRouter(
@@ -39,6 +38,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 @router.post("/", response_model=UserResponse, status_code=201)
 async def create_user(
     user_data: UserCreate,
+    current_user = Depends(require_role("ADMIN")),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -60,7 +60,7 @@ async def create_user(
 
 @router.get("/", response_model=UserListResponse)
 async def get_users(
-    current_user: UserModel = Depends(require_organization),
+    current_user = Depends(require_role("ORGANIZATION")),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
     user_service: UserService = Depends(get_user_service)
@@ -99,7 +99,7 @@ async def get_users(
 @router.get("/{user_id}", response_model=UserInfo)
 async def get_user(
     user_id: int,
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -134,7 +134,7 @@ async def get_user(
 async def update_user(
     user_id: int,
     user_data: UserUpdate,
-    current_user: UserModel = Depends(get_current_active_user),
+    current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
 ):
     """
@@ -176,18 +176,24 @@ async def update_user(
     )
 
 
-@router.delete("/{user_id}", response_model=DeleteResponse)
+@router.delete("/{user_id}")
 async def delete_user(
     user_id: int,
-    current_user: UserModel = Depends(require_organization),
+    current_user = Depends(require_role("ADMIN")),
     user_service: UserService = Depends(get_user_service)
 ):
     """
-    Delete user by ID (Admin/Organization only)
+    Delete user by ID
 
-    - ADMIN: Can delete any user
-    - ORGANIZATION: Can delete users in their organization (TODO: implement organization filtering)
-
-    - **user_id**: The ID of the user to delete
+    Requires ADMIN role.
     """
-    return await user_service.delete_user(user_id)
+    # Prevent users from deleting themselves
+    if str(current_user.id) == str(user_id):
+        raise HTTPException(
+            status_code=400,
+            detail="You cannot delete your own account"
+        )
+
+    result = await user_service.delete_user(user_id)
+    return result
+
