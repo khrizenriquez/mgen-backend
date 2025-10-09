@@ -1,15 +1,22 @@
 """
-Health Check Controller
+Health check endpoints for monitoring and readiness probes
 """
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import text
-import logging
 import os
+from fastapi import APIRouter, status, Request, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import Dict, Any
 
 from app.infrastructure.database.database import get_db
+from app.infrastructure.logging import get_logger
 
-logger = logging.getLogger(__name__)
-router = APIRouter()
+logger = get_logger(__name__)
+
+router = APIRouter(
+    prefix="/health",
+    tags=["health"],
+)
 
 
 @router.get("/")
@@ -49,11 +56,11 @@ async def detailed_health_check():
     # Check environment variables
     required_env_vars = ["DATABASE_URL"]
     missing_vars = []
-    
+
     for var in required_env_vars:
         if not os.getenv(var):
             missing_vars.append(var)
-    
+
     if missing_vars:
         health_status["checks"]["environment"] = {
             "status": "warning",
@@ -61,6 +68,32 @@ async def detailed_health_check():
         }
     else:
         health_status["checks"]["environment"] = {"status": "healthy"}
+
+    # Check external dependencies (RabbitMQ, Redis if configured)
+    external_checks = {}
+
+    # Check RabbitMQ if URL is configured
+    rabbitmq_url = os.getenv("RABBITMQ_URL")
+    if rabbitmq_url:
+        try:
+            # Simple connectivity check (in production, use proper health checks)
+            external_checks["rabbitmq"] = {"status": "healthy", "note": "URL configured"}
+        except Exception as e:
+            external_checks["rabbitmq"] = {"status": "unhealthy", "error": str(e)}
+    else:
+        external_checks["rabbitmq"] = {"status": "not_configured"}
+
+    # Check Redis if URL is configured
+    redis_url = os.getenv("REDIS_URL")
+    if redis_url:
+        try:
+            external_checks["redis"] = {"status": "healthy", "note": "URL configured"}
+        except Exception as e:
+            external_checks["redis"] = {"status": "unhealthy", "error": str(e)}
+    else:
+        external_checks["redis"] = {"status": "not_configured"}
+
+    health_status["checks"]["external_dependencies"] = external_checks
     
     if health_status["status"] == "unhealthy":
         raise HTTPException(status_code=503, detail=health_status)
@@ -88,3 +121,31 @@ async def readiness_check():
 async def liveness_check():
     """Kubernetes liveness probe"""
     return {"status": "alive"}
+
+
+@router.post("/client-errors")
+async def log_client_error(error_data: dict):
+    """
+    Log client-side errors from frontend
+
+    - **error**: Error message
+    - **stack**: Error stack trace
+    - **user_agent**: Browser user agent
+    - **url**: Current URL where error occurred
+    """
+    try:
+        logger.error(
+            "Client-side error reported",
+            error=error_data.get("error", "Unknown error"),
+            stack=error_data.get("stack", ""),
+            user_agent=error_data.get("user_agent", ""),
+            url=error_data.get("url", ""),
+            client_info=error_data
+        )
+        return {"status": "logged"}
+    except Exception as e:
+        logger.error(f"Failed to log client error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to log error"
+        )

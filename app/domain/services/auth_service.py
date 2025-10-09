@@ -19,6 +19,7 @@ from app.infrastructure.auth.jwt_utils import (
 )
 from app.infrastructure.external.email_service import email_service
 from app.infrastructure.logging import get_logger
+from app.infrastructure.validators import validate_email_for_registration
 
 logger = get_logger(__name__)
 
@@ -31,6 +32,14 @@ class AuthService:
 
     def register_user(self, user_data: UserRegister, current_user: Optional[UserModel] = None) -> UserModel:
         """Register a new user"""
+        # Validate email format and domain
+        is_valid_email, email_error = validate_email_for_registration(user_data.email)
+        if not is_valid_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid email: {email_error}"
+            )
+        
         # Check if email already exists
         existing_user = self.db.query(UserModel).filter(
             UserModel.email == user_data.email
@@ -44,8 +53,13 @@ class AuthService:
         # Validate role permissions
         requested_role = user_data.role.upper()
 
-        # Only ADMIN can create ADMIN, ORGANIZATION, or AUDITOR roles
+        # Define roles that require admin privileges
         admin_only_roles = {"ADMIN", "ORGANIZATION", "AUDITOR"}
+        
+        # Public roles that can be self-registered
+        public_roles = {"USER", "DONOR"}
+
+        # Only ADMIN can create ADMIN, ORGANIZATION, or AUDITOR roles
         if requested_role in admin_only_roles:
             if not current_user:
                 raise HTTPException(
@@ -59,6 +73,13 @@ class AuthService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Only administrators can create users with elevated roles"
                 )
+        
+        # Validate that the requested role exists and is either public or user is admin
+        elif requested_role not in public_roles:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {requested_role}. Public registration only allows USER or DONOR roles."
+            )
 
         # Get role
         role = self.db.query(RoleModel).filter(

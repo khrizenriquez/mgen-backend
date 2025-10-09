@@ -17,6 +17,7 @@ from app.infrastructure.auth.dependencies import (
     require_admin, require_organization, require_auditor
 )
 from app.infrastructure.logging import get_logger
+from app.infrastructure.monitoring import USER_REGISTRATION_COUNT, LOGIN_ATTEMPTS
 
 logger = get_logger(__name__)
 
@@ -49,6 +50,10 @@ async def register_user(
         user = auth_service.register_user(user_data, current_user)
         logger.info(f"User registered successfully: {user.email}")
 
+        # Update metrics - get role from user_roles relationship
+        user_role_name = user.user_roles[0].role.name if user.user_roles else 'USER'
+        USER_REGISTRATION_COUNT.labels(role=user_role_name).inc()
+
         return GenericResponse(message="User registered successfully. Please check your email for verification.")
 
     except HTTPException:
@@ -75,6 +80,8 @@ async def login_user(
     try:
         user = auth_service.authenticate_user(user_data)
         if not user:
+            # Failed login attempt
+            LOGIN_ATTEMPTS.labels(success='false').inc()
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
@@ -82,6 +89,9 @@ async def login_user(
 
         tokens = auth_service.create_tokens(user)
         logger.info(f"User logged in: {user.email}")
+
+        # Successful login attempt
+        LOGIN_ATTEMPTS.labels(success='true').inc()
 
         return tokens
 

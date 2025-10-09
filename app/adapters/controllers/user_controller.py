@@ -21,6 +21,10 @@ from app.infrastructure.auth.dependencies import (
     get_current_active_user, require_role, require_admin, require_organization, require_any_role, user_to_user_info
 )
 
+from app.infrastructure.database.models import UserModel
+from app.infrastructure.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/users",

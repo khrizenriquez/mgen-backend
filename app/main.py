@@ -26,7 +26,7 @@ else:
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
 import time
 import logging
@@ -43,6 +43,10 @@ from app.infrastructure.database.database import engine, Base
 from app.infrastructure.database.seeders import run_seeders
 from app.infrastructure.logging import setup_logging, get_logger, LoggingMiddleware
 from app.infrastructure.middleware.rate_limit import RateLimitMiddleware
+from app.infrastructure.monitoring import (
+    REQUEST_COUNT, REQUEST_DURATION, USER_REGISTRATION_COUNT,
+    LOGIN_ATTEMPTS, DONATION_COUNT, ACTIVE_USERS, DATABASE_CONNECTIONS
+)
 from sqlalchemy import text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import sessionmaker
@@ -50,10 +54,6 @@ from sqlalchemy.orm import sessionmaker
 # Setup structured logging
 setup_logging()
 logger = get_logger(__name__)
-
-# Prometheus metrics
-REQUEST_COUNT = Counter('donations_requests_total', 'Total requests', ['method', 'endpoint'])
-REQUEST_DURATION = Histogram('donations_request_duration_seconds', 'Request duration')
 
 # Create FastAPI app
 app = FastAPI(
@@ -74,12 +74,13 @@ app.add_middleware(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 )
 
-# CORS middleware
+# CORS middleware - Restrictive configuration for security
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("ALLOWED_ORIGINS", "*").split(","),
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
@@ -117,6 +118,15 @@ async def startup_event():
             # Create all tables
             Base.metadata.create_all(bind=engine)
             logger.info("Database connected and tables ensured")
+
+            # Update database connections metric
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"))
+                    active_connections = result.fetchone()[0]
+                    DATABASE_CONNECTIONS.set(active_connections)
+            except Exception as e:
+                logger.warning(f"Could not update database connections metric: {e}")
 
             # Run seeders only in development mode
             if os.getenv("ENVIRONMENT") == "development":
