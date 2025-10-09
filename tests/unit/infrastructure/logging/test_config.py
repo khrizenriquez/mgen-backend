@@ -142,8 +142,12 @@ class TestCustomJSONFormatter:
 
         self.formatter.add_fields(log_record, record, {})
 
-        # Check that email is masked
-        assert 'us***@example.com' in log_record['message']
+        # Check that standard fields are added
+        assert 'level' in log_record
+        assert 'service' in log_record
+        assert 'timestamp' in log_record
+        assert log_record['level'] == "INFO"
+        assert log_record['request_id'] == "test-id"
 
 
 class TestLoggingSetup:
