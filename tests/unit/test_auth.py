@@ -89,7 +89,7 @@ class TestAuthService:
             role="USER"
         )
 
-        with patch('app.infrastructure.external.email_service.email_service.send_email_verification') as mock_email:
+        with patch('app.infrastructure.external.email_service.email_service.send_email_verification_email') as mock_email:
             mock_email.return_value = True
             result = auth_service.register_user(user_data)
 
