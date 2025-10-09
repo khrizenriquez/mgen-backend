@@ -11,6 +11,7 @@ omit =
     */alembic/*
 
 [report]
+fail_under = 80
 precision = 2
 show_missing = True
 skip_covered = False
