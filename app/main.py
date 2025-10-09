@@ -73,12 +73,13 @@ app.add_middleware(
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 )
 
-# CORS middleware
+# CORS middleware - Restrictive configuration for security
+allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=os.getenv("ALLOWED_ORIGINS", "*").split(","),
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
