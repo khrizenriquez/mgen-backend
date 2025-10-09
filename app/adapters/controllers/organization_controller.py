@@ -17,7 +17,9 @@ from app.domain.services.organization_service import OrganizationService
 from app.infrastructure.database.database import get_db
 from app.infrastructure.auth.dependencies import get_current_active_user, require_admin
 from app.infrastructure.database.models import UserModel
+from app.infrastructure.logging import get_logger
 
+logger = get_logger(__name__)
 
 router = APIRouter(
     prefix="/organizations",

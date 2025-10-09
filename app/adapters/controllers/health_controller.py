@@ -1,15 +1,22 @@
 """
-Health Check Controller
+Health check endpoints for monitoring and readiness probes
 """
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import text
-import logging
 import os
+from fastapi import APIRouter, status, Request, HTTPException
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+from datetime import datetime
+from typing import Dict, Any
 
 from app.infrastructure.database.database import get_db
+from app.infrastructure.logging import get_logger
 
-logger = logging.getLogger(__name__)
-router = APIRouter()
+logger = get_logger(__name__)
+
+router = APIRouter(
+    prefix="/health",
+    tags=["health"],
+)
 
 
 @router.get("/")
