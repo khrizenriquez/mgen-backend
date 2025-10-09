@@ -34,6 +34,7 @@ import os
 import structlog
 
 from app.adapters.controllers.auth_controller import router as auth_router
+from app.adapters.controllers.dashboard_controller import router as dashboard_router
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
 from app.adapters.controllers.organization_controller import router as organization_router
@@ -161,9 +162,10 @@ async def shutdown_event():
 # Include routers
 app.include_router(health_router, prefix="/health", tags=["health"])
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
+app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
 app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
-app.include_router(user_router, prefix="/api/v1", tags=["users"])
+# app.include_router(user_router, prefix="/api/v1", tags=["users"])
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")

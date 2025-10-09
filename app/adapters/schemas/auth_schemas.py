@@ -1,7 +1,7 @@
 """
 Authentication Pydantic schemas for request/response validation
 """
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -64,8 +64,7 @@ class RoleInfo(BaseModel):
     name: str = Field(..., description="Role name")
     description: Optional[str] = Field(None, description="Role description")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DashboardResponse(BaseModel):
