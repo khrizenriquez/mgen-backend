@@ -26,11 +26,12 @@ class TestUserModel:
     def test_user_password_hash(self):
         """Test password hashing"""
         password = "secure_password_123"
-        # Simulate hashed password
-        password_hash = f"hashed_{password}"
-        
+        # Simulate hashed password (bcrypt format)
+        password_hash = "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewfBPjYkq9PFC6"
+
         assert password not in password_hash
         assert len(password_hash) > len(password)
+        assert password_hash.startswith("$2b$")
 
     def test_user_roles(self):
         """Test user roles"""

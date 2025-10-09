@@ -2,15 +2,26 @@
 Unit tests for dashboard service
 """
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, AsyncMock
 from decimal import Decimal
 from datetime import datetime, timedelta
+
+from app.domain.services.dashboard_service import DashboardService
 
 
 @pytest.fixture
 def mock_db():
     """Mock database session"""
-    return Mock()
+    db = Mock()
+    db.query = Mock()
+    db.execute = Mock()
+    return db
+
+
+@pytest.fixture
+def dashboard_service(mock_db):
+    """Dashboard service instance"""
+    return DashboardService(mock_db)
 
 
 class TestDashboardService:

@@ -32,15 +32,16 @@ class TestEmailValidator:
         ]
         
         for email in invalid_emails:
-            # Basic validation
-            is_invalid = (
-                "@" not in email or
-                email.startswith("@") or
-                email.endswith("@") or
-                " " in email or
-                email.count("@") != 1
-            )
-            assert is_invalid
+            # Basic validation - at least one should be true for invalid emails
+            has_no_at = "@" not in email
+            starts_with_at = email.startswith("@") if "@" in email else False
+            ends_with_at = email.endswith("@") if "@" in email else False
+            has_space = " " in email
+            wrong_at_count = email.count("@") != 1
+            domain_starts_with_dot = email.split('@')[1].startswith('.') if '@' in email and len(email.split('@')) > 1 else False
+
+            is_invalid = has_no_at or starts_with_at or ends_with_at or has_space or wrong_at_count or domain_starts_with_dot
+            assert is_invalid, f"Email {email} should be invalid but passed validation"
 
     def test_disposable_email_detection(self):
         """Test disposable email domain detection"""

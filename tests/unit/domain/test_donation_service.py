@@ -2,134 +2,158 @@
 Unit tests for donation service
 """
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, AsyncMock
 from decimal import Decimal
 from datetime import datetime
 
+from app.domain.services.donation_service import DonationService
+from app.domain.entities.donation import DonationStatus, DonationType
+
 
 @pytest.fixture
-def mock_db():
-    """Mock database session"""
-    return Mock()
+def mock_repository():
+    """Mock donation repository"""
+    repo = Mock()
+    repo.create = AsyncMock()
+    repo.get_by_id = AsyncMock()
+    repo.update = AsyncMock()
+    repo.get_total_amount_by_status = AsyncMock()
+    repo.count_by_status = AsyncMock()
+    repo.get_by_email = AsyncMock()
+    return repo
 
 
 @pytest.fixture
 def sample_donation():
-    """Sample donation mock"""
+    """Sample donation entity"""
     donation = Mock()
-    donation.id = "donation-123"
+    donation.id = 1
     donation.donor_name = "John Doe"
     donation.donor_email = "john@example.com"
-    donation.amount = Decimal("100.00")
-    donation.currency = "USD"
-    donation.status = "pending"
+    donation.amount_gtq = Decimal("100.00")
+    donation.status_id = 1  # PENDING
+    donation.description = "Test donation"
     donation.created_at = datetime.utcnow()
+    donation.updated_at = datetime.utcnow()
+    donation.paid_at = None
+    donation.is_pending = True
+    donation.approve = Mock()
+    donation.decline = Mock()
+    donation.cancel = Mock()
     return donation
+
+
+@pytest.fixture
+def donation_service(mock_repository):
+    """Donation service instance"""
+    return DonationService(mock_repository)
 
 
 class TestDonationService:
     """Test donation service business logic"""
 
-    def test_validate_donation_amount(self):
-        """Test donation amount validation"""
-        valid_amounts = [
-            Decimal("10.00"),
-            Decimal("100.00"),
-            Decimal("1000.00"),
-            Decimal("0.01")
-        ]
-        
-        for amount in valid_amounts:
-            assert amount > 0
-            assert isinstance(amount, Decimal)
+    @pytest.mark.asyncio
+    async def test_create_donation_success(self, donation_service, mock_repository, sample_donation):
+        """Test successful donation creation"""
+        mock_repository.create.return_value = sample_donation
 
-    def test_validate_currency_code(self):
-        """Test currency code validation"""
-        valid_currencies = ["USD", "EUR", "GBP", "MXN", "CAD"]
-        
-        for currency in valid_currencies:
-            assert len(currency) == 3
-            assert currency.isupper()
+        result = await donation_service.create_donation(
+            donor_name="John Doe",
+            donor_email="john@example.com",
+            amount=Decimal("100.00"),
+            currency="USD",
+            donation_type=DonationType.ONE_TIME
+        )
 
-    def test_calculate_fee(self):
-        """Test fee calculation"""
-        amount = Decimal("100.00")
-        fee_percentage = Decimal("0.03")  # 3%
-        expected_fee = amount * fee_percentage
-        
-        assert expected_fee == Decimal("3.00")
+        assert result == sample_donation
+        mock_repository.create.assert_called_once()
 
-    def test_calculate_net_amount(self):
-        """Test net amount calculation"""
-        gross_amount = Decimal("100.00")
-        fee = Decimal("3.00")
-        expected_net = gross_amount - fee
-        
-        assert expected_net == Decimal("97.00")
+    @pytest.mark.asyncio
+    async def test_create_donation_minimum_amount(self, donation_service, mock_repository):
+        """Test minimum donation amount validation"""
+        with pytest.raises(ValueError, match="Minimum donation amount"):
+            await donation_service.create_donation(
+                donor_name="John Doe",
+                donor_email="john@example.com",
+                amount=Decimal("0.50"),
+                currency="USD",
+                donation_type=DonationType.ONE_TIME
+            )
 
-    def test_validate_email_format(self):
-        """Test email validation"""
-        valid_emails = [
-            "test@example.com",
-            "user.name@domain.co.uk",
-            "admin+tag@test.com"
-        ]
-        
-        for email in valid_emails:
-            assert "@" in email
-            assert "." in email
+    @pytest.mark.asyncio
+    async def test_create_donation_maximum_amount(self, donation_service, mock_repository):
+        """Test maximum donation amount validation"""
+        with pytest.raises(ValueError, match="Maximum donation amount"):
+            await donation_service.create_donation(
+                donor_name="John Doe",
+                donor_email="john@example.com",
+                amount=Decimal("15000.00"),
+                currency="USD",
+                donation_type=DonationType.ONE_TIME
+            )
 
-    def test_generate_reference_code(self):
-        """Test reference code generation"""
-        import uuid
-        reference = str(uuid.uuid4())[:8].upper()
-        
-        assert len(reference) == 8
-        assert reference.isupper()
+    @pytest.mark.asyncio
+    async def test_process_donation_success(self, donation_service, mock_repository, sample_donation):
+        """Test successful donation processing"""
+        mock_repository.get_by_id.return_value = sample_donation
+        mock_repository.update.return_value = sample_donation
 
-    def test_donation_status_transitions(self):
-        """Test valid donation status transitions"""
-        valid_transitions = {
-            "pending": ["completed", "failed", "cancelled"],
-            "completed": [],
-            "failed": ["pending"],
-            "cancelled": []
-        }
-        
-        assert "completed" in valid_transitions["pending"]
-        assert len(valid_transitions["completed"]) == 0
+        result = await donation_service.process_donation(1)
 
-    def test_payment_method_validation(self):
-        """Test payment method validation"""
-        valid_methods = [
-            "credit_card",
-            "debit_card",
-            "paypal",
-            "bank_transfer"
-        ]
-        
-        for method in valid_methods:
-            assert isinstance(method, str)
-            assert len(method) > 0
+        assert result == sample_donation
+        sample_donation.approve.assert_called_once()
+        mock_repository.update.assert_called_once()
 
-    def test_donation_metadata(self):
-        """Test donation metadata handling"""
-        metadata = {
-            "campaign_id": "camp-123",
-            "source": "website",
-            "device": "mobile"
-        }
-        
-        assert "campaign_id" in metadata
-        assert isinstance(metadata["source"], str)
+    @pytest.mark.asyncio
+    async def test_process_donation_not_found(self, donation_service, mock_repository):
+        """Test processing non-existent donation"""
+        mock_repository.get_by_id.return_value = None
 
-    def test_donor_anonymity(self):
-        """Test anonymous donation handling"""
-        anonymous_donor = {
-            "name": "Anonymous",
-            "email": None,
-            "show_name": False
-        }
-        
-        assert anonymous_donor["name"] == "Anonymous"
-        assert anonymous_donor["show_name"] is False
+        with pytest.raises(ValueError, match="not found"):
+            await donation_service.process_donation(1)
+
+    @pytest.mark.asyncio
+    async def test_process_donation_not_pending(self, donation_service, mock_repository, sample_donation):
+        """Test processing donation that is not pending"""
+        sample_donation.is_pending = False
+        mock_repository.get_by_id.return_value = sample_donation
+
+        with pytest.raises(ValueError, match="not in pending status"):
+            await donation_service.process_donation(1)
+
+    @pytest.mark.asyncio
+    async def test_cancel_donation_success(self, donation_service, mock_repository, sample_donation):
+        """Test successful donation cancellation"""
+        mock_repository.get_by_id.return_value = sample_donation
+        mock_repository.update.return_value = sample_donation
+
+        result = await donation_service.cancel_donation(1)
+
+        assert result == sample_donation
+        sample_donation.cancel.assert_called_once()
+        mock_repository.update.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_get_donation_statistics(self, donation_service, mock_repository):
+        """Test getting donation statistics"""
+        mock_repository.get_total_amount_by_status.side_effect = [Decimal("1000.00"), Decimal("500.00")]
+        mock_repository.count_by_status.side_effect = [10, 5, 2]
+
+        result = await donation_service.get_donation_statistics()
+
+        assert result["total_amount_approved"] == 1000.0
+        assert result["total_amount_pending"] == 500.0
+        assert result["count_approved"] == 10
+        assert result["count_pending"] == 5
+        assert result["count_failed"] == 2
+        assert "success_rate" in result
+
+    @pytest.mark.asyncio
+    async def test_get_donor_donations(self, donation_service, mock_repository, sample_donation):
+        """Test getting donor donations"""
+        mock_repository.get_by_email.return_value = [sample_donation]
+
+        result = await donation_service.get_donor_donations("john@example.com")
+
+        assert result == [sample_donation]
+        mock_repository.get_by_email.assert_called_once_with("john@example.com")
