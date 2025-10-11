@@ -54,14 +54,17 @@ class DonationService:
             id=None,
             donor_name=donor_name.strip(),
             donor_email=donor_email.strip().lower(),
-            amount=amount,
-            currency=currency.upper(),
+            amount_gtq=amount,
+            status_id=DonationStatus.PENDING.value,
             donation_type=donation_type,
-            status=DonationStatus.PENDING,
-            description=description,
+            donor_nit=None,
+            user_id=None,
+            payu_order_id=None,
+            reference_code=f"REF-{now.timestamp()}",
+            correlation_id=f"CORR-{now.timestamp()}",
             created_at=now,
             updated_at=now,
-            completed_at=None
+            paid_at=None
         )
         
         # Save donation
@@ -85,17 +88,17 @@ class DonationService:
         
         try:
             # Here you would integrate with payment processor
-            # For now, we'll just mark as completed
-            donation.complete()
-            
+            # For now, we'll just mark as approved
+            donation.approve()
+
             updated_donation = await self.donation_repository.update(donation)
             logger.info(f"Donation {donation_id} processed successfully")
-            
+
             return updated_donation
-            
+
         except Exception as e:
             logger.error(f"Failed to process donation {donation_id}: {e}")
-            donation.fail(str(e))
+            donation.decline()
             await self.donation_repository.update(donation)
             raise
     
@@ -119,30 +122,30 @@ class DonationService:
         """
         Get donation statistics
         """
-        total_completed = await self.donation_repository.get_total_amount_by_status(
-            DonationStatus.COMPLETED
+        total_approved = await self.donation_repository.get_total_amount_by_status(
+            DonationStatus.APPROVED
         )
         total_pending = await self.donation_repository.get_total_amount_by_status(
             DonationStatus.PENDING
         )
-        
-        count_completed = await self.donation_repository.count_by_status(
-            DonationStatus.COMPLETED
+
+        count_approved = await self.donation_repository.count_by_status(
+            DonationStatus.APPROVED
         )
         count_pending = await self.donation_repository.count_by_status(
             DonationStatus.PENDING
         )
         count_failed = await self.donation_repository.count_by_status(
-            DonationStatus.FAILED
+            DonationStatus.DECLINED
         )
-        
+
         return {
-            "total_amount_completed": float(total_completed),
+            "total_amount_approved": float(total_approved),
             "total_amount_pending": float(total_pending),
-            "count_completed": count_completed,
+            "count_approved": count_approved,
             "count_pending": count_pending,
             "count_failed": count_failed,
-            "success_rate": count_completed / max(count_completed + count_failed, 1) * 100
+            "success_rate": count_approved / max(count_approved + count_failed, 1) * 100
         }
     
     async def get_donor_donations(self, email: str) -> List[Donation]:

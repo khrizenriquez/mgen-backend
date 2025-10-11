@@ -12,16 +12,23 @@ from uuid import UUID
 class DonationStatus(Enum):
     """Donation status enumeration - maps to status_catalog table"""
     PENDING = 1      # donation.pending
-    APPROVED = 2     # donation.approved  
+    APPROVED = 2     # donation.approved
     DECLINED = 3     # donation.declined
     EXPIRED = 4      # donation.expired
+
+
+class DonationType(Enum):
+    """Donation type enumeration"""
+    ONE_TIME = "one_time"
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
 
 
 @dataclass
 class Donation:
     """
     Donation entity representing a donation in the system
-    
+
     This is a core business entity that contains the essential
     attributes and business rules for donations. Based on the real
     database schema from schema.sql.
@@ -36,6 +43,7 @@ class Donation:
     payu_order_id: Optional[str]
     reference_code: str
     correlation_id: str
+    donation_type: DonationType
     created_at: datetime
     updated_at: datetime
     paid_at: Optional[datetime]
