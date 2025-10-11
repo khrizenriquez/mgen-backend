@@ -2,6 +2,7 @@
 Integration tests for Docker volume persistence (Task 96)
 Tests that data persists across container restarts and volume management
 """
+import os
 import pytest
 import psycopg2
 import time
@@ -10,6 +11,34 @@ import json
 from typing import Dict, Any
 
 
+def check_docker_available():
+    """Check if Docker is available and database is running"""
+    try:
+        # Check if Docker daemon is running
+        result = subprocess.run(['docker', 'ps'], capture_output=True, timeout=5)
+        if result.returncode != 0:
+            return False
+        
+        # Check if database is accessible
+        try:
+            conn = psycopg2.connect(
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", "5432")),
+                database=os.getenv("POSTGRES_DB", "donations_db"),
+                user=os.getenv("POSTGRES_USER", "postgres"),
+                password=os.getenv("POSTGRES_PASSWORD", "postgres"),
+                connect_timeout=3
+            )
+            conn.close()
+            return True
+        except psycopg2.OperationalError:
+            return False
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        return False
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not check_docker_available(), reason="Docker or database not available")
 class TestDatabasePersistence:
     """Test database data persistence across container restarts"""
     
@@ -17,11 +46,11 @@ class TestDatabasePersistence:
     def db_connection(self):
         """Create database connection for testing"""
         conn = psycopg2.connect(
-            host="localhost",
-            port=5432,
-            database="donations_db",
-            user="postgres",
-            password="postgres"
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            database=os.getenv("POSTGRES_DB", "donations_db"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgres")
         )
         yield conn
         conn.close()
@@ -144,6 +173,8 @@ class TestDatabasePersistence:
             assert volume in volumes, f"Volume {volume} not found"
 
 
+@pytest.mark.integration
+@pytest.mark.skipif(not check_docker_available(), reason="Docker or database not available")
 class TestGrafanaLogsPersistence:
     """Test Grafana and logs data persistence"""
     
@@ -174,6 +205,8 @@ class TestGrafanaLogsPersistence:
         assert volume_info[0]['Name'] == 'mgen-backend_loki_data'
 
 
+@pytest.mark.integration
+@pytest.mark.skipif(not check_docker_available(), reason="Docker or database not available")
 class TestVolumeRecovery:
     """Test volume backup and recovery scenarios"""
     

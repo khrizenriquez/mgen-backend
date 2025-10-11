@@ -90,7 +90,11 @@ class EmailService:
 
     def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
         """Send password reset email"""
-        reset_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/reset-password?token={reset_token}"
+        frontend_url = os.getenv('FRONTEND_URL')
+        if not frontend_url:
+            logger.error("FRONTEND_URL environment variable not set")
+            return False
+        reset_url = f"{frontend_url}/reset-password?token={reset_token}"
 
         subject = "Password Reset Request"
         html_content = f"""
@@ -127,7 +131,11 @@ class EmailService:
 
     def send_email_verification_email(self, to_email: str, verification_token: str) -> bool:
         """Send email verification email"""
-        verification_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:3000')}/verify-email?token={verification_token}"
+        frontend_url = os.getenv('FRONTEND_URL')
+        if not frontend_url:
+            logger.error("FRONTEND_URL environment variable not set")
+            return False
+        verification_url = f"{frontend_url}/verify-email?token={verification_token}"
 
         subject = "Verify Your Email Address"
         html_content = f"""

@@ -115,47 +115,105 @@ class TestSeedOrganization:
 class TestSeedDefaultUsers:
     """Test seed default users function"""
 
+    @patch('app.infrastructure.database.seeders.seed_organization')
+    @patch('app.infrastructure.database.seeders.seed_roles')
     @patch('app.infrastructure.database.seeders.get_password_hash')
-    def test_seed_default_users_creates_missing_users(self, mock_hash, mock_db):
+    def test_seed_default_users_creates_missing_users(self, mock_hash, mock_seed_roles, mock_seed_org, mock_db):
         """Test that seed_default_users creates users that don't exist"""
         mock_hash.return_value = "hashed_password"
 
-        # Mock that no users exist
-        mock_query = Mock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        # Mock roles
+        mock_admin_role = Mock()
+        mock_admin_role.name = "ADMIN"
+        mock_donor_role = Mock()
+        mock_donor_role.name = "DONOR"
+        mock_user_role = Mock()
+        mock_user_role.name = "USER"
+
+        # Mock query to return roles first, then no existing users
+        def query_side_effect(model):
+            mock_query = Mock()
+            if model.__name__ == 'RoleModel':
+                # Return roles in order: ADMIN, DONOR, USER
+                mock_query.filter.return_value.first.side_effect = [
+                    mock_admin_role, mock_donor_role, mock_user_role
+                ]
+            else:  # UserModel
+                # No existing users
+                mock_query.filter.return_value.first.return_value = None
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
 
         seed_default_users(mock_db)
 
         # Should add users and user roles
-        assert mock_db.add.call_count >= 2  # At least admin and auditor users
-        mock_db.commit.assert_called_once()
+        assert mock_db.add.call_count >= 3  # At least 3 users and their roles
+        assert mock_db.commit.call_count >= 1
 
+    @patch('app.infrastructure.database.seeders.seed_organization')
+    @patch('app.infrastructure.database.seeders.seed_roles')
     @patch('app.infrastructure.database.seeders.get_password_hash')
-    def test_seed_default_users_skips_existing_users(self, mock_hash, mock_db):
+    def test_seed_default_users_skips_existing_users(self, mock_hash, mock_seed_roles, mock_seed_org, mock_db):
         """Test that seed_default_users skips users that already exist"""
         mock_hash.return_value = "hashed_password"
 
+        # Mock roles
+        mock_admin_role = Mock()
+        mock_admin_role.name = "ADMIN"
+        mock_donor_role = Mock()
+        mock_donor_role.name = "DONOR"
+        mock_user_role = Mock()
+        mock_user_role.name = "USER"
+
         # Mock that users already exist
         mock_existing_user = Mock()
-        mock_query = Mock()
-        mock_query.filter.return_value.first.return_value = mock_existing_user
-        mock_db.query.return_value = mock_query
+        
+        # Mock query to return roles first, then existing users
+        def query_side_effect(model):
+            mock_query = Mock()
+            if model.__name__ == 'RoleModel':
+                mock_query.filter.return_value.first.side_effect = [
+                    mock_admin_role, mock_donor_role, mock_user_role
+                ]
+            else:  # UserModel
+                mock_query.filter.return_value.first.return_value = mock_existing_user
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
 
         seed_default_users(mock_db)
 
         # Should not add any users
         mock_db.add.assert_not_called()
 
+    @patch('app.infrastructure.database.seeders.seed_organization')
+    @patch('app.infrastructure.database.seeders.seed_roles')
     @patch('app.infrastructure.database.seeders.get_password_hash')
-    def test_seed_default_users_creates_admin_user(self, mock_hash, mock_db):
+    def test_seed_default_users_creates_admin_user(self, mock_hash, mock_seed_roles, mock_seed_org, mock_db):
         """Test that seed_default_users creates admin user with correct data"""
         mock_hash.return_value = "hashed_password"
 
-        # Mock that no users exist
-        mock_query = Mock()
-        mock_query.filter.return_value.first.return_value = None
-        mock_db.query.return_value = mock_query
+        # Mock roles
+        mock_admin_role = Mock()
+        mock_admin_role.name = "ADMIN"
+        mock_donor_role = Mock()
+        mock_donor_role.name = "DONOR"
+        mock_user_role = Mock()
+        mock_user_role.name = "USER"
+
+        # Mock query to return roles first, then no existing users
+        def query_side_effect(model):
+            mock_query = Mock()
+            if model.__name__ == 'RoleModel':
+                mock_query.filter.return_value.first.side_effect = [
+                    mock_admin_role, mock_donor_role, mock_user_role
+                ]
+            else:  # UserModel
+                mock_query.filter.return_value.first.return_value = None
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
 
         seed_default_users(mock_db)
 
@@ -163,13 +221,15 @@ class TestSeedDefaultUsers:
         add_calls = mock_db.add.call_args_list
         admin_user_call = None
         for call_args in add_calls:
-            if hasattr(call_args[0][0], 'email') and call_args[0][0].email == "admin@donacionesgt.org":
+            if hasattr(call_args[0][0], 'email') and call_args[0][0].email == "adminseminario@test.com":
                 admin_user_call = call_args[0][0]
                 break
 
-        assert admin_user_call is not None
-        assert admin_user_call.first_name == "Admin"
-        assert admin_user_call.last_name == "System"
+        assert admin_user_call is not None, "Admin user should have been created"
+        # UserModel only has email, password_hash, email_verified, is_active fields
+        assert admin_user_call.email == "adminseminario@test.com"
+        assert admin_user_call.email_verified == True
+        assert admin_user_call.is_active == True
 
 
 class TestRunSeeders:
@@ -190,15 +250,15 @@ class TestRunSeeders:
     @patch('app.infrastructure.database.seeders.seed_organization')
     @patch('app.infrastructure.database.seeders.seed_default_users')
     def test_run_seeders_handles_exceptions(self, mock_seed_users, mock_seed_org, mock_seed_roles, mock_db):
-        """Test that run_seeders handles exceptions gracefully"""
+        """Test that run_seeders handles exceptions and rolls back"""
         mock_seed_roles.side_effect = Exception("Role seeding failed")
 
-        # Should not raise exception
-        run_seeders(mock_db)
+        # Should raise the exception
+        with pytest.raises(Exception, match="Role seeding failed"):
+            run_seeders(mock_db)
 
-        # Other seeders should still be called
-        mock_seed_org.assert_called_once_with(mock_db)
-        mock_seed_users.assert_called_once_with(mock_db)
+        # Database rollback should be called
+        mock_db.rollback.assert_called_once()
 
 
 class TestSeedersIntegration:

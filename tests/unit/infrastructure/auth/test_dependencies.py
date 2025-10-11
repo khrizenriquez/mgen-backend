@@ -25,13 +25,14 @@ def mock_db():
 @pytest.fixture
 def mock_user():
     """Mock user model"""
+    from datetime import datetime
     user = Mock()
     user.id = uuid4()
     user.email = "test@example.com"
     user.email_verified = False
     user.is_active = True
-    user.created_at = "2023-01-01T00:00:00"
-    user.updated_at = "2023-01-01T00:00:00"
+    user.created_at = datetime(2023, 1, 1, 0, 0, 0)
+    user.updated_at = datetime(2023, 1, 1, 0, 0, 0)
     user.user_roles = []
     return user
 

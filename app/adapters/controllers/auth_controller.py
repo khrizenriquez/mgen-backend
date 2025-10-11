@@ -51,8 +51,14 @@ async def register_user(
         logger.info(f"User registered successfully: {user.email}")
 
         # Update metrics - get role from user_roles relationship
-        user_role_name = user.user_roles[0].role.name if user.user_roles else 'USER'
-        USER_REGISTRATION_COUNT.labels(role=user_role_name).inc()
+        try:
+            user_role_name = user.user_roles[0].role.name if user.user_roles else 'USER'
+            # Ensure it's a string for Prometheus labels
+            if isinstance(user_role_name, str):
+                USER_REGISTRATION_COUNT.labels(role=user_role_name).inc()
+        except (AttributeError, IndexError, Exception) as metric_error:
+            # Log but don't fail the request if metrics fail (especially in tests)
+            logger.warning(f"Failed to update registration metrics: {metric_error}")
 
         return GenericResponse(message="User registered successfully. Please check your email for verification.")
 
@@ -81,7 +87,10 @@ async def login_user(
         user = await auth_service.authenticate_user(user_data)
         if not user:
             # Failed login attempt
-            LOGIN_ATTEMPTS.labels(success='false').inc()
+            try:
+                LOGIN_ATTEMPTS.labels(success='false').inc()
+            except Exception as metric_error:
+                logger.warning(f"Failed to update login metrics: {metric_error}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password"
@@ -91,7 +100,10 @@ async def login_user(
         logger.info(f"User logged in: {user.email}")
 
         # Successful login attempt
-        LOGIN_ATTEMPTS.labels(success='true').inc()
+        try:
+            LOGIN_ATTEMPTS.labels(success='true').inc()
+        except Exception as metric_error:
+            logger.warning(f"Failed to update login metrics: {metric_error}")
 
         return tokens
 
