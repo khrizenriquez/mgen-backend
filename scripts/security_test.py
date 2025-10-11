@@ -6,10 +6,21 @@ import os
 import sys
 import requests
 from pathlib import Path
+import pytest
 
 # Add the app directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+def check_server_available(base_url="http://localhost:8000"):
+    """Check if server is available"""
+    try:
+        response = requests.get(f"{base_url}/health/", timeout=2)
+        return response.status_code == 200
+    except (requests.ConnectionError, requests.Timeout):
+        return False
+
+@pytest.mark.integration
+@pytest.mark.skipif(not check_server_available(), reason="Server not running at localhost:8000")
 def test_user_creation_security():
     """Test that user creation security works correctly"""
     base_url = "http://localhost:8000"
@@ -70,6 +81,8 @@ def test_user_creation_security():
     print("\n🎉 All user creation security tests PASSED!")
     return True
 
+@pytest.mark.integration
+@pytest.mark.skipif(not check_server_available(), reason="Server not running at localhost:8000")
 def test_endpoint_protection():
     """Test that endpoints are properly protected"""
     base_url = "http://localhost:8000"
