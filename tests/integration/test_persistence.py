@@ -2,6 +2,7 @@
 Integration tests for Docker volume persistence (Task 96)
 Tests that data persists across container restarts and volume management
 """
+import os
 import pytest
 import psycopg2
 import time
@@ -21,11 +22,11 @@ def check_docker_available():
         # Check if database is accessible
         try:
             conn = psycopg2.connect(
-                host="localhost",
-                port=5432,
-                database="donations_db",
-                user="postgres",
-                password="postgres",
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", "5432")),
+                database=os.getenv("POSTGRES_DB", "donations_db"),
+                user=os.getenv("POSTGRES_USER", "postgres"),
+                password=os.getenv("POSTGRES_PASSWORD", "postgres"),
                 connect_timeout=3
             )
             conn.close()
@@ -45,11 +46,11 @@ class TestDatabasePersistence:
     def db_connection(self):
         """Create database connection for testing"""
         conn = psycopg2.connect(
-            host="localhost",
-            port=5432,
-            database="donations_db",
-            user="postgres",
-            password="postgres"
+            host=os.getenv("DB_HOST", "localhost"),
+            port=int(os.getenv("DB_PORT", "5432")),
+            database=os.getenv("POSTGRES_DB", "donations_db"),
+            user=os.getenv("POSTGRES_USER", "postgres"),
+            password=os.getenv("POSTGRES_PASSWORD", "postgres")
         )
         yield conn
         conn.close()
