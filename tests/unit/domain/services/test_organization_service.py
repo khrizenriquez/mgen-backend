@@ -148,23 +148,25 @@ class TestUpdateOrganization:
 
     def test_update_organization_success(self, organization_service, mock_db, mock_organization, organization_update_data):
         """Test successful organization update"""
-        # Mock existing organization
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_organization
-
-        # Mock update
-        mock_updated_org = Mock()
-        mock_updated_org.id = mock_organization.id
-        mock_updated_org.name = organization_update_data.name
-
-        mock_db.merge.return_value = mock_updated_org
+        # Mock query to return organization twice: once for get_organization, once for name check
+        def query_side_effect(*args):
+            mock_query = Mock()
+            mock_query.filter.return_value.first.return_value = mock_organization
+            return mock_query
+        
+        mock_db.query.side_effect = [
+            query_side_effect(),  # First call: get_organization
+            query_side_effect(),  # Second call: check name existence (returns same org, so no conflict)
+        ]
+        
         mock_db.commit = Mock()
         mock_db.refresh = Mock()
 
         result = organization_service.update_organization(mock_organization.id, organization_update_data)
 
         assert result.name == organization_update_data.name
-        mock_db.merge.assert_called_once()
         mock_db.commit.assert_called_once()
+        mock_db.refresh.assert_called_once()
 
     def test_update_organization_not_found(self, organization_service, mock_db, organization_update_data):
         """Test updating non-existent organization"""
@@ -181,7 +183,21 @@ class TestDeleteOrganization:
 
     def test_delete_organization_success(self, organization_service, mock_db, mock_organization):
         """Test successful organization deletion"""
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_organization
+        # Mock multiple query calls
+        call_count = [0]
+        
+        def query_side_effect(*args):
+            call_count[0] += 1
+            mock_query = Mock()
+            if call_count[0] == 1:
+                # First call: get_organization
+                mock_query.filter.return_value.first.return_value = mock_organization
+            else:
+                # Second call: count users
+                mock_query.filter.return_value.count.return_value = 0
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
         mock_db.delete = Mock()
         mock_db.commit = Mock()
 
@@ -206,18 +222,52 @@ class TestGetOrganizationSummary:
 
     def test_get_organization_summary_success(self, organization_service, mock_db, mock_organization):
         """Test getting organization summary"""
-        # Mock organization
-        mock_db.query.return_value.filter.return_value.first.return_value = mock_organization
-
-        # Mock donation count and sum
-        mock_donation_query = Mock()
-        mock_donation_query.filter.return_value.group_by.return_value.all.return_value = [(5, 500.00)]
-        mock_db.query.return_value = mock_donation_query
+        # Mock multiple query calls
+        call_count = [0]
+        
+        def query_side_effect(*args):
+            call_count[0] += 1
+            mock_query = Mock()
+            
+            if call_count[0] == 1:
+                # First call: get_organization
+                mock_query.filter.return_value.first.return_value = mock_organization
+            elif call_count[0] == 2:
+                # Second call: count users
+                mock_query.filter.return_value.count.return_value = 5
+            elif call_count[0] == 3:
+                # Third call: subquery for user IDs (used in .in_())
+                mock_subquery = Mock()
+                mock_subquery.filter.return_value = mock_subquery
+                return mock_subquery
+            elif call_count[0] == 4:
+                # Fourth call: count donations with .in_()
+                mock_filter = Mock()
+                mock_filter.count.return_value = 10
+                mock_query.filter.return_value = mock_filter
+            elif call_count[0] == 5:
+                # Fifth call: subquery for user IDs again
+                mock_subquery = Mock()
+                mock_subquery.filter.return_value = mock_subquery
+                return mock_subquery
+            else:
+                # Sixth call: sum donations with .in_()
+                mock_filter = Mock()
+                mock_filter.filter.return_value = mock_filter
+                mock_filter.scalar.return_value = 500.00
+                mock_query.filter.return_value = mock_filter
+            
+            return mock_query
+        
+        mock_db.query.side_effect = query_side_effect
 
         result = organization_service.get_organization_summary(mock_organization.id)
 
         assert isinstance(result, OrganizationSummary)
         assert result.name == mock_organization.name
+        assert result.total_users == 5
+        assert result.total_donations == 10
+        assert result.total_amount == 500.00
 
     def test_get_organization_summary_not_found(self, organization_service, mock_db):
         """Test getting summary for non-existent organization"""
@@ -234,18 +284,46 @@ class TestGetAllOrganizationSummaries:
 
     def test_get_all_organization_summaries_success(self, organization_service, mock_db):
         """Test getting all organization summaries"""
-        mock_orgs = [Mock(), Mock()]
-        mock_db.query.return_value.all.return_value = mock_orgs
+        from unittest.mock import patch
+        
+        # Create mock organizations
+        mock_org1 = Mock()
+        mock_org1.id = uuid4()
+        mock_org1.name = "Org 1"
+        
+        mock_org2 = Mock()
+        mock_org2.id = uuid4()
+        mock_org2.name = "Org 2"
+        
+        mock_orgs = [mock_org1, mock_org2]
+        
+        # Create mock summaries
+        mock_summary1 = OrganizationSummary(
+            id=mock_org1.id,
+            name="Org 1",
+            total_users=5,
+            total_donations=10,
+            total_amount=1000.00
+        )
+        
+        mock_summary2 = OrganizationSummary(
+            id=mock_org2.id,
+            name="Org 2",
+            total_users=3,
+            total_donations=7,
+            total_amount=750.00
+        )
+        
+        # Mock get_organizations to return mock_orgs
+        # Mock get_organization_summary to return appropriate summaries
+        with patch.object(organization_service, 'get_organizations', return_value=mock_orgs):
+            with patch.object(organization_service, 'get_organization_summary', side_effect=[mock_summary1, mock_summary2]):
+                result = organization_service.get_all_organization_summaries()
 
-        # Mock donation stats for each org
-        mock_donation_query = Mock()
-        mock_donation_query.filter.return_value.group_by.return_value.all.return_value = [(10, 1000.00)]
-        mock_db.query.return_value = mock_donation_query
-
-        result = organization_service.get_all_organization_summaries()
-
-        assert isinstance(result, list)
-        assert len(result) >= 0  # May be empty if mocking is complex
+                assert isinstance(result, list)
+                assert len(result) == 2
+                assert result[0].name == "Org 1"
+                assert result[1].name == "Org 2"
 
 
 class TestOrganizationServiceIntegration:

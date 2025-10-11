@@ -99,7 +99,10 @@ async def add_process_time_header(request, call_next):
     
     # Record duration
     process_time = time.time() - start_time
-    REQUEST_DURATION.observe(process_time)
+    REQUEST_DURATION.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(process_time)
     response.headers["X-Process-Time"] = str(process_time)
     
     return response
@@ -160,7 +163,7 @@ async def shutdown_event():
     logger.info("Application shutting down")
 
 # Include routers
-app.include_router(health_router, prefix="/health", tags=["health"])
+app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])

@@ -17,9 +17,19 @@ logger = get_logger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT settings
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+
+# In testing/development, use a default key; in production, require it
 if not SECRET_KEY:
-    raise ValueError("JWT_SECRET_KEY environment variable is required for security")
+    if ENVIRONMENT == "testing":
+        SECRET_KEY = "test-jwt-secret-key-for-ci"
+        logger.warning("Using default JWT_SECRET_KEY for testing environment")
+    elif ENVIRONMENT == "development":
+        SECRET_KEY = "dev-jwt-secret-key-not-for-production"
+        logger.warning("Using default JWT_SECRET_KEY for development environment")
+    else:
+        raise ValueError("JWT_SECRET_KEY environment variable is required for production")
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
