@@ -7,8 +7,18 @@ from sqlalchemy.dialects.postgresql import UUID as PostgreSQL_UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from enum import Enum
+import os
 
 from app.infrastructure.database.database import Base
+
+# Custom UUID type that uses String for SQLite (tests) and PostgreSQL UUID for production
+class CustomUUID:
+    def __new__(cls, as_uuid=True):
+        # Use String for SQLite (tests), PostgreSQL UUID for production
+        if os.getenv('TESTING') == 'true':
+            return String
+        else:
+            return PostgreSQL_UUID(as_uuid=as_uuid)
 
 
 class StatusCatalogModel(Base):
@@ -40,7 +50,7 @@ class OrganizationModel(Base):
     """
     __tablename__ = "organization"
 
-    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    id = Column(CustomUUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     name = Column(Text, nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
     contact_email = Column(Text, nullable=True)
@@ -65,12 +75,12 @@ class UserModel(Base):
     """
     __tablename__ = "app_user"
 
-    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    id = Column(CustomUUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     email = Column(Text, nullable=False, unique=True, index=True)
     password_hash = Column(Text, nullable=False)
     email_verified = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
-    organization_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('organization.id'), nullable=True)
+    organization_id = Column(CustomUUID(as_uuid=True), ForeignKey('organization.id'), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -111,7 +121,7 @@ class UserRoleModel(Base):
     """
     __tablename__ = "app_user_role"
     
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True, nullable=False)
+    user_id = Column(CustomUUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True, nullable=False)
     role_id = Column(Integer, ForeignKey('app_role.id', ondelete='CASCADE'), primary_key=True, nullable=False)
     assigned_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -132,7 +142,7 @@ class DonationModel(Base):
     """
     __tablename__ = "donation"
     
-    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    id = Column(CustomUUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
     amount_gtq = Column(Numeric(12, 2), nullable=False, index=True)
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), index=True)
@@ -141,7 +151,7 @@ class DonationModel(Base):
     donor_email = Column(Text, nullable=False, index=True)
     donor_name = Column(Text, nullable=True)
     donor_nit = Column(Text, nullable=True)
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id'), nullable=True)
+    user_id = Column(CustomUUID(as_uuid=True), ForeignKey('app_user.id'), nullable=True)
     payu_order_id = Column(Text, nullable=True)
     reference_code = Column(Text, nullable=False, unique=True, index=True)
     correlation_id = Column(Text, nullable=False, unique=True, index=True)
@@ -170,8 +180,8 @@ class PaymentEventModel(Base):
     """
     __tablename__ = "payment_event"
     
-    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
+    id = Column(CustomUUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    donation_id = Column(CustomUUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
     event_id = Column(Text, nullable=False, unique=True, index=True)
     source = Column(Text, nullable=False, index=True)  # 'webhook' or 'recon'
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
@@ -203,8 +213,8 @@ class EmailLogModel(Base):
     """
     __tablename__ = "email_log"
     
-    id = Column(PostgreSQL_UUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
-    donation_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
+    id = Column(CustomUUID(as_uuid=True), primary_key=True, index=True, server_default=func.gen_random_uuid())
+    donation_id = Column(CustomUUID(as_uuid=True), ForeignKey('donation.id', ondelete='RESTRICT'), nullable=False, index=True)
     to_email = Column(Text, nullable=False, index=True)
     type = Column(Text, nullable=False, index=True)  # 'receipt' or 'resend'
     status_id = Column(Integer, ForeignKey('status_catalog.id'), nullable=False, index=True)
@@ -239,7 +249,7 @@ class DonorContactModel(Base):
     """
     __tablename__ = "donor_contact"
     
-    user_id = Column(PostgreSQL_UUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True)
+    user_id = Column(CustomUUID(as_uuid=True), ForeignKey('app_user.id', ondelete='CASCADE'), primary_key=True)
     phone_number = Column(Text, nullable=True)
     address = Column(Text, nullable=True)
     contact_preference = Column(Text, nullable=True, index=True)  # 'email', 'phone', 'mail'

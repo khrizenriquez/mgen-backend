@@ -11,11 +11,14 @@ class PIIMasker:
     def __init__(self):
         # Compile regex patterns for better performance
         self.patterns: Dict[str, Pattern] = {
+            'auth_token': re.compile(
+                r'(?i)(bearer\s+|token[:\s]+|jwt[:\s]+|api[_-]?key[:\s]+)([a-zA-Z0-9._-]{20,})'
+            ),
             'email': re.compile(
                 r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
             ),
             'phone': re.compile(
-                r'(\+?1[-.\s]?)?\(?([0-9]{3})\)?[-.\s]?([0-9]{3})[-.\s]?([0-9]{4})'
+                r'\b\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b'
             ),
             'credit_card': re.compile(
                 r'\b(?:\d{4}[-\s]?){3}\d{4}\b'
@@ -23,11 +26,8 @@ class PIIMasker:
             'ssn': re.compile(
                 r'\b\d{3}-?\d{2}-?\d{4}\b'
             ),
-            'auth_token': re.compile(
-                r'(?i)(bearer\s+|token[:\s]+|jwt[:\s]+|api[_-]?key[:\s]+)([a-zA-Z0-9._-]{20,})'
-            ),
             'password': re.compile(
-                r'(?i)(password[:\s]+|pwd[:\s]+|pass[:\s]+)([^\s]{6,})'
+                r'(?i)(password[:\s]+|pwd[:\s]+|pass[:\s]+)(.*)'
             ),
             'authorization': re.compile(
                 r'(?i)(authorization[:\s]+)([^\s]{20,})'
@@ -36,7 +36,7 @@ class PIIMasker:
         
         # Replacement patterns
         self.replacements = {
-            'email': lambda m: f"{m.group(1)[:2]}***@{m.group(1).split('@')[1]}",
+            'email': lambda m: f"{m.group(0).split('@')[0][:2]}***@{m.group(0).split('@')[1]}",
             'phone': '***-***-****',
             'credit_card': '****-****-****-****',
             'ssn': '***-**-****',

@@ -1,7 +1,8 @@
 # Configuration for pytest-cov
 [run]
 source = app
-omit = 
+branch = True
+omit =
     */tests/*
     */test_*
     */__pycache__/*
@@ -9,11 +10,15 @@ omit =
     */venv/*
     */migrations/*
     */alembic/*
+    */conftest.py
+    */scripts/*
 
 [report]
+fail_under = 60
 precision = 2
 show_missing = True
 skip_covered = False
+skip_empty = True
 
 exclude_lines =
     pragma: no cover

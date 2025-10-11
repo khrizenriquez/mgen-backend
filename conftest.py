@@ -3,6 +3,9 @@ Configuración global de pytest para el proyecto.
 Contiene fixtures compartidas y configuración de testing.
 """
 
+import os
+os.environ['TESTING'] = 'true'
+
 import pytest
 import asyncio
 from typing import AsyncGenerator, Generator
