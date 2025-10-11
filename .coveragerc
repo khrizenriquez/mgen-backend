@@ -1,0 +1,39 @@
+# Configuration for pytest-cov
+[run]
+source = app
+branch = True
+omit =
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */site-packages/*
+    */venv/*
+    */migrations/*
+    */alembic/*
+    */conftest.py
+    */scripts/*
+
+[report]
+fail_under = 60
+precision = 2
+show_missing = True
+skip_covered = False
+skip_empty = True
+
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    @abstractmethod
+    @abc.abstractmethod
+    class .*\bProtocol\):
+    @overload
+
+[html]
+directory = htmlcov
+
+[json]
+output = coverage.json
