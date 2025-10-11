@@ -226,8 +226,10 @@ class TestSeedDefaultUsers:
                 break
 
         assert admin_user_call is not None, "Admin user should have been created"
-        assert admin_user_call.first_name == "Admin"
-        assert admin_user_call.last_name == "System"
+        # UserModel only has email, password_hash, email_verified, is_active fields
+        assert admin_user_call.email == "adminseminario@test.com"
+        assert admin_user_call.email_verified == True
+        assert admin_user_call.is_active == True
 
 
 class TestRunSeeders:
