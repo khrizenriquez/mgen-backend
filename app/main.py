@@ -99,7 +99,10 @@ async def add_process_time_header(request, call_next):
     
     # Record duration
     process_time = time.time() - start_time
-    REQUEST_DURATION.observe(process_time)
+    REQUEST_DURATION.labels(
+        method=request.method,
+        endpoint=request.url.path
+    ).observe(process_time)
     response.headers["X-Process-Time"] = str(process_time)
     
     return response
