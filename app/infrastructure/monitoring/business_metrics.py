@@ -60,13 +60,13 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
 
     # Total donations amount
     total_amount_result = db.execute(
-        text("SELECT COALESCE(SUM(amount_gtq), 0) as total FROM donations WHERE status_id = 2")  # APPROVED
+        text("SELECT COALESCE(SUM(amount_gtq), 0) as total FROM donation WHERE status_id = 2")  # APPROVED
     )
     total_amount = total_amount_result.scalar() or 0
 
     # Average donation amount
     avg_amount_result = db.execute(
-        text("SELECT COALESCE(AVG(amount_gtq), 0) as avg FROM donations WHERE status_id = 2")
+        text("SELECT COALESCE(AVG(amount_gtq), 0) as avg FROM donation WHERE status_id = 2")
     )
     avg_amount = avg_amount_result.scalar() or 0
 
@@ -74,7 +74,7 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
     status_counts_result = db.execute(
         text("""
             SELECT status_id, COUNT(*) as count
-            FROM donations
+            FROM donation
             GROUP BY status_id
         """)
     )
@@ -82,7 +82,7 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
 
     # Total organizations
     org_count_result = db.execute(
-        text("SELECT COUNT(*) FROM organizations WHERE active = true")
+        text("SELECT COUNT(*) FROM organization WHERE active = true")
     )
     org_count = org_count_result.scalar() or 0
 
@@ -93,7 +93,7 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
             SELECT
                 COALESCE(d.user_id::text, 'anonymous') as donor_id,
                 COALESCE(SUM(d.amount_gtq), 0) as total_amount
-            FROM donations d
+            FROM donation d
             WHERE d.status_id = 2
             AND d.created_at >= :thirty_days_ago
             GROUP BY d.user_id
@@ -111,7 +111,7 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
                 DATE_TRUNC('month', created_at) as month,
                 COUNT(*) as donation_count,
                 COALESCE(SUM(amount_gtq), 0) as total_amount
-            FROM donations
+            FROM donation
             WHERE status_id = 2
             AND created_at >= :one_year_ago
             GROUP BY DATE_TRUNC('month', created_at)
@@ -129,10 +129,10 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
     ]
 
     # Success rate calculation
-    total_donations_result = db.execute(text("SELECT COUNT(*) FROM donations"))
+    total_donations_result = db.execute(text("SELECT COUNT(*) FROM donation"))
     total_donations = total_donations_result.scalar() or 0
 
-    approved_donations_result = db.execute(text("SELECT COUNT(*) FROM donations WHERE status_id = 2"))
+    approved_donations_result = db.execute(text("SELECT COUNT(*) FROM donation WHERE status_id = 2"))
     approved_donations = approved_donations_result.scalar() or 0
 
     success_rate = (approved_donations / total_donations * 100) if total_donations > 0 else 0
