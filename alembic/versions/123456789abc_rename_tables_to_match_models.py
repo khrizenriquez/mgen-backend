@@ -26,8 +26,8 @@ def upgrade() -> None:
     # Since we're in a test environment, we'll drop and recreate the table
     # In production, this would require more careful data migration
 
-    # Drop existing table
-    op.drop_table('user_roles')
+    # Drop existing table (now renamed to app_user_role)
+    op.drop_table('app_user_role')
 
     # Recreate with correct types
     op.create_table(
@@ -59,21 +59,10 @@ def downgrade() -> None:
     op.drop_constraint('fk_donor_contacts_user_id', 'donor_contacts', type_='foreignkey')
     op.create_foreign_key('donor_contacts_user_id_fkey', 'donor_contacts', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
 
-    # Drop the app_user_role table and recreate as user_roles
-    op.drop_table('app_user_role')
-
-    op.create_table(
-        'user_roles',
-        sa.Column('user_id', sa.Integer(), nullable=False),
-        sa.Column('role_id', sa.Integer(), nullable=False),
-        sa.Column('granted_at', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=False),
-        sa.PrimaryKeyConstraint('user_id', 'role_id')
-    )
-
-    # Reverse the renames
-    op.rename_table('app_user', 'users')
-    op.rename_table('app_role', 'roles')
+    # Reverse the renames first
     op.rename_table('app_user_role', 'user_roles')
+    op.rename_table('app_role', 'roles')
+    op.rename_table('app_user', 'users')
 
     # Recreate original foreign keys
     op.create_foreign_key('user_roles_user_id_fkey', 'user_roles', 'users', ['user_id'], ['id'], ondelete='CASCADE')
