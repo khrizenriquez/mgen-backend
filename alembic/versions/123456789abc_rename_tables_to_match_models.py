@@ -49,6 +49,10 @@ def upgrade() -> None:
     op.drop_constraint('donor_contacts_user_id_fkey', 'donor_contacts', type_='foreignkey')
     op.create_foreign_key('fk_donor_contacts_user_id', 'donor_contacts', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
 
+    # Update organization foreign key reference
+    op.drop_constraint('fk_users_organization_id', 'app_user', type_='foreignkey')
+    op.create_foreign_key('fk_app_user_organization_id', 'app_user', 'organization', ['organization_id'], ['id'])
+
 
 def downgrade() -> None:
     # Reverse the renames
@@ -63,3 +67,7 @@ def downgrade() -> None:
 
     op.drop_constraint('fk_donor_contacts_user_id', 'donor_contacts', type_='foreignkey')
     op.create_foreign_key('donor_contacts_user_id_fkey', 'donor_contacts', 'users', ['user_id'], ['id'], ondelete='CASCADE')
+
+    # Update organization foreign key reference back
+    op.drop_constraint('fk_app_user_organization_id', 'users', type_='foreignkey')
+    op.create_foreign_key('fk_users_organization_id', 'users', 'organization', ['organization_id'], ['id'])
