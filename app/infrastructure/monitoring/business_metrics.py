@@ -26,19 +26,23 @@ async def generate_business_metrics() -> Dict[str, Any]:
     Generate business intelligence metrics
     This data changes less frequently than technical metrics
     """
+    db = None
     try:
-        async with get_db() as db:
-            metrics = await _calculate_business_metrics(db)
+        # Get database session from generator
+        db_generator = get_db()
+        db = next(db_generator)
+        
+        metrics = _calculate_business_metrics(db)
 
-            # Update Prometheus Gauges with current values
-            await _update_prometheus_gauges(metrics)
+        # Update Prometheus Gauges with current values
+        _update_prometheus_gauges(metrics)
 
-            return {
-                "timestamp": datetime.utcnow().isoformat(),
-                "metrics": metrics,
-                "update_interval": "5m",  # Recommended refresh interval
-                "description": "Business intelligence metrics for Donations Guatemala"
-            }
+        return {
+            "timestamp": datetime.utcnow().isoformat(),
+            "metrics": metrics,
+            "update_interval": "5m",  # Recommended refresh interval
+            "description": "Business intelligence metrics for Donations Guatemala"
+        }
 
     except Exception as e:
         logger.error("Error calculating business metrics", error=str(e), exc_info=True)
@@ -46,25 +50,28 @@ async def generate_business_metrics() -> Dict[str, Any]:
             "error": "Failed to calculate business metrics",
             "timestamp": datetime.utcnow().isoformat()
         }
+    finally:
+        if db:
+            db.close()
 
 
-async def _calculate_business_metrics(db: AsyncSession) -> Dict[str, Any]:
+def _calculate_business_metrics(db) -> Dict[str, Any]:
     """Calculate all business metrics from database"""
 
     # Total donations amount
-    total_amount_result = await db.execute(
+    total_amount_result = db.execute(
         text("SELECT COALESCE(SUM(amount_gtq), 0) as total FROM donations WHERE status_id = 2")  # APPROVED
     )
     total_amount = total_amount_result.scalar() or 0
 
     # Average donation amount
-    avg_amount_result = await db.execute(
+    avg_amount_result = db.execute(
         text("SELECT COALESCE(AVG(amount_gtq), 0) as avg FROM donations WHERE status_id = 2")
     )
     avg_amount = avg_amount_result.scalar() or 0
 
     # Donations by status
-    status_counts_result = await db.execute(
+    status_counts_result = db.execute(
         text("""
             SELECT status_id, COUNT(*) as count
             FROM donations
@@ -74,14 +81,14 @@ async def _calculate_business_metrics(db: AsyncSession) -> Dict[str, Any]:
     status_counts = {row[0]: row[1] for row in status_counts_result.fetchall()}
 
     # Total organizations
-    org_count_result = await db.execute(
+    org_count_result = db.execute(
         text("SELECT COUNT(*) FROM organizations WHERE active = true")
     )
     org_count = org_count_result.scalar() or 0
 
     # Top donors (last 30 days)
     thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    top_donors_result = await db.execute(
+    top_donors_result = db.execute(
         text("""
             SELECT
                 COALESCE(d.user_id::text, 'anonymous') as donor_id,
@@ -98,7 +105,7 @@ async def _calculate_business_metrics(db: AsyncSession) -> Dict[str, Any]:
     top_donors = [{"donor_id": row[0], "amount": float(row[1])} for row in top_donors_result.fetchall()]
 
     # Monthly donation trends (last 12 months)
-    monthly_trends_result = await db.execute(
+    monthly_trends_result = db.execute(
         text("""
             SELECT
                 DATE_TRUNC('month', created_at) as month,
@@ -122,10 +129,10 @@ async def _calculate_business_metrics(db: AsyncSession) -> Dict[str, Any]:
     ]
 
     # Success rate calculation
-    total_donations_result = await db.execute(text("SELECT COUNT(*) FROM donations"))
+    total_donations_result = db.execute(text("SELECT COUNT(*) FROM donations"))
     total_donations = total_donations_result.scalar() or 0
 
-    approved_donations_result = await db.execute(text("SELECT COUNT(*) FROM donations WHERE status_id = 2"))
+    approved_donations_result = db.execute(text("SELECT COUNT(*) FROM donations WHERE status_id = 2"))
     approved_donations = approved_donations_result.scalar() or 0
 
     success_rate = (approved_donations / total_donations * 100) if total_donations > 0 else 0
@@ -173,7 +180,7 @@ def _calculate_growth_rate(monthly_trends: List[Dict]) -> float:
     return round(growth_rate, 2)
 
 
-async def _update_prometheus_gauges(metrics: Dict[str, Any]) -> None:
+def _update_prometheus_gauges(metrics: Dict[str, Any]) -> None:
     """Update Prometheus Gauges with calculated business metrics"""
     try:
         # Update financial metrics
