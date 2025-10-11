@@ -1,7 +1,7 @@
 apiVersion: 1
 
 providers:
-  - name: 'dashboards'
+  - name: 'default'
     orgId: 1
     folder: ''
     type: file
@@ -11,3 +11,14 @@ providers:
     allowUiUpdates: true
     options:
       path: /etc/grafana/provisioning/dashboards
+
+  - name: 'donations-dashboards'
+    orgId: 1
+    folder: 'Donaciones'
+    type: file
+    disableDeletion: false
+    editable: true
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/donations

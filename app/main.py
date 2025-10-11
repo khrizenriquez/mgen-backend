@@ -173,6 +173,23 @@ async def metrics():
     """Prometheus metrics endpoint"""
     return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
+# Business metrics endpoint (less frequent updates)
+@app.get("/metrics/business")
+async def business_metrics():
+    """Business-specific metrics endpoint for slower-refreshing data"""
+    try:
+        # Import here to avoid circular imports
+        from app.infrastructure.monitoring.business_metrics import generate_business_metrics
+
+        business_data = await generate_business_metrics()
+        return JSONResponse(content=business_data, media_type="application/json")
+    except Exception as e:
+        logger.error("Error generating business metrics", error=str(e))
+        return JSONResponse(
+            content={"error": "Failed to generate business metrics"},
+            status_code=500
+        )
+
 # Root endpoint
 @app.get("/")
 async def root():

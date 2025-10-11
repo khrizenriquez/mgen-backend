@@ -1,11 +1,38 @@
 [build]
 builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
+# Railway supports multiple containers per service
+# Monitoring services will be deployed alongside the main API
+
+# Multi-service deployment configuration
+[services.api]
+build = { builder = "dockerfile", dockerfilePath = "Dockerfile" }
+healthcheckPath = "/health"
+
+[services.prometheus]
+build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
+healthcheckPath = "/-/healthy"
+sourceDir = "monitoring/prometheus"
+
+[services.grafana]
+build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
+healthcheckPath = "/api/health"
+sourceDir = "monitoring/grafana"
+
+[services.loki]
+build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
+healthcheckPath = "/ready"
+sourceDir = "monitoring/loki"
+
+[services.promtail]
+build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
+sourceDir = "monitoring/promtail"
 
 [environments.production]
 DATABASE_URL = "${{ RAILWAY_PROJECT_ENV.DATABASE_URL }}"
