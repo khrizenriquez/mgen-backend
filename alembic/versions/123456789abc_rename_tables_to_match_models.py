@@ -70,7 +70,7 @@ def upgrade() -> None:
     # Since this is for testing and we're dropping data anyway, we can recreate the column
     op.execute('ALTER TABLE donor_contacts ALTER COLUMN user_id TYPE UUID USING NULL')
 
-    # Create foreign keys for the new tables
+    # Create foreign keys for the new app_user_role table
     op.create_foreign_key('fk_app_user_role_user_id', 'app_user_role', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
     op.create_foreign_key('fk_app_user_role_role_id', 'app_user_role', 'app_role', ['role_id'], ['id'], ondelete='CASCADE')
 
