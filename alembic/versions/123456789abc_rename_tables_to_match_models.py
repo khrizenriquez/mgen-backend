@@ -66,6 +66,10 @@ def upgrade() -> None:
     op.drop_table('app_user_old')
     op.drop_table('app_user_role_old')
 
+    # Update donor_contacts.user_id column type from INTEGER to UUID to match new app_user.id
+    # Since this is for testing and we're dropping data anyway, we can recreate the column
+    op.execute('ALTER TABLE donor_contacts ALTER COLUMN user_id TYPE UUID USING NULL')
+
     # Create foreign keys for the new tables
     op.create_foreign_key('fk_app_user_role_user_id', 'app_user_role', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
     op.create_foreign_key('fk_app_user_role_role_id', 'app_user_role', 'app_role', ['role_id'], ['id'], ondelete='CASCADE')
@@ -83,6 +87,9 @@ def downgrade() -> None:
     op.drop_constraint('fk_donor_contacts_user_id', 'donor_contacts', type_='foreignkey')
     op.drop_constraint('fk_app_user_role_user_id', 'app_user_role', type_='foreignkey')
     op.drop_constraint('fk_app_user_role_role_id', 'app_user_role', type_='foreignkey')
+
+    # Revert donor_contacts.user_id column type from UUID back to INTEGER
+    op.execute('ALTER TABLE donor_contacts ALTER COLUMN user_id TYPE INTEGER USING NULL')
 
     # Now we can safely drop current tables
     op.drop_table('app_user_role')
