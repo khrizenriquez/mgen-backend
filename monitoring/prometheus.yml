@@ -42,11 +42,11 @@ scrape_configs:
     scrape_timeout: 10s
 
   # Node exporter for system metrics (if running)
-  - job_name: 'node-exporter'
-    static_configs:
-      - targets: ['node-exporter:9100']
-    scrape_interval: 30s
-    enabled: false  # Enable when node-exporter is deployed
+  # Remove the comment below to enable node-exporter when deployed
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+  #   scrape_interval: 30s
 
   # Custom business metrics (example)
   - job_name: 'donations-business'

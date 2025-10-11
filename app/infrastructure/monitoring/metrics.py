@@ -7,7 +7,7 @@ from prometheus_client import Counter, Histogram, Gauge, Summary
 REQUEST_COUNT = Counter(
     'donations_requests_total',
     'Total HTTP requests',
-    ['method', 'endpoint', 'status_code']
+    ['method', 'endpoint']
 )
 REQUEST_DURATION = Histogram(
     'donations_request_duration_seconds',
