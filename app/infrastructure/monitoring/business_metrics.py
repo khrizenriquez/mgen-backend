@@ -215,3 +215,4 @@ async def test_business_metrics():
 if __name__ == "__main__":
     # Allow running this module directly for testing
     asyncio.run(test_business_metrics())
+

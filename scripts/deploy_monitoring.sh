@@ -96,11 +96,26 @@ deploy_monitoring() {
         for var in "${required_vars[@]}"; do
             if [ -z "${!var}" ]; then
                 print_error "Required environment variable $var is not set"
+                print_error "Please set it in your .env file or environment"
                 exit 1
             fi
         done
 
+        # Warn about default passwords in development
+        if [ "${GRAFANA_ADMIN_USER}" = "admin" ] && [ "$ENVIRONMENT" = "production" ]; then
+            print_warning "Using default Grafana admin user 'admin' in production!"
+            print_warning "Consider changing GRAFANA_ADMIN_USER in your .env file"
+        fi
+
         print_success "Environment variables validated"
+    else
+        # Development validation
+        print_status "Validating development environment variables..."
+
+        if [ -z "${GRAFANA_ADMIN_USER}" ] || [ -z "${GRAFANA_ADMIN_PASSWORD}" ]; then
+            print_warning "Grafana credentials not set. Using defaults for development."
+            print_warning "Set GRAFANA_ADMIN_USER and GRAFANA_ADMIN_PASSWORD in your .env file for security."
+        fi
     fi
 
     # Stop existing services if running
@@ -248,3 +263,4 @@ case "${2:-deploy}" in
         exit 1
         ;;
 esac
+

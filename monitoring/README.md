@@ -59,15 +59,15 @@ docker-compose -f docker-compose.railway.yml up -d --build
 ### Desarrollo:
 ```
 Grafana: http://localhost:3000
-Usuario: admin
-Contraseña: donaciones2024
+Usuario: Configurado en .env (o admin por defecto)
+Contraseña: Configurada en .env (o donaciones2024 por defecto)
 ```
 
 ### Producción:
 ```
 Grafana: [URL-de-Railway]:3000
-Usuario: $GRAFANA_ADMIN_USER
-Contraseña: $GRAFANA_ADMIN_PASSWORD
+Usuario: $GRAFANA_ADMIN_USER (OBLIGATORIO)
+Contraseña: $GRAFANA_ADMIN_PASSWORD (OBLIGATORIO)
 ```
 
 ---
@@ -134,24 +134,50 @@ donations_by_status{status}
 
 ---
 
+## 🔐 Configuración de Seguridad
+
+### **IMPORTANTE:** Configurar Credenciales Seguras
+
+**ANTES de desplegar, lee:** [`SECURITY_SETUP.md`](SECURITY_SETUP.md)
+
+#### **Configuración Obligatoria en .env:**
+```bash
+# Producción - OBLIGATORIO
+GRAFANA_ADMIN_USER=tu_usuario_seguro
+GRAFANA_ADMIN_PASSWORD=tu_password_muy_seguro_32_chars
+
+# Desarrollo - Opcional (tiene defaults)
+# GRAFANA_ADMIN_USER=admin
+# GRAFANA_ADMIN_PASSWORD=tu_password_seguro
+```
+
+#### **Generar Contraseñas Seguras:**
+```bash
+# Generar password segura de 32 caracteres
+openssl rand -base64 32
+```
+
+---
+
 ## 🔧 Configuración por Entorno
 
 ### Desarrollo (`docker-compose.railway.yml`):
 ```yaml
 # Servicios locales con configuración de desarrollo
-- Prometheus: localhost:9090
-- Grafana: localhost:3000 (admin/donaciones2024)
-- Loki: localhost:3100
+- Prometheus: localhost:9090 (sin autenticación)
+- Grafana: localhost:3000 (credenciales desde .env o defaults)
+- Loki: localhost:3100 (sin autenticación)
 ```
 
 ### Producción (Railway):
 ```toml
-# railway.toml - Múltiples servicios
+# railway.toml - Múltiples servicios con credenciales seguras
 [services.prometheus]
 build = { dockerfilePath = "Dockerfile.monitoring" }
 
 [services.grafana]
 build = { dockerfilePath = "Dockerfile.monitoring" }
+# Credenciales validadas desde variables de entorno
 
 [services.loki]
 build = { dockerfilePath = "Dockerfile.monitoring" }
@@ -318,3 +344,4 @@ REDIS_URL=redis://...
 ---
 
 **¡El stack de monitoreo está completamente funcional y listo para producción!** 🎉
+
