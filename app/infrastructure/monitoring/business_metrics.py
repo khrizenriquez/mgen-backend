@@ -82,7 +82,7 @@ def _calculate_business_metrics(db) -> Dict[str, Any]:
 
     # Total organizations
     org_count_result = db.execute(
-        text("SELECT COUNT(*) FROM organization WHERE active = true")
+        text("SELECT COUNT(*) FROM organization WHERE is_active = true")
     )
     org_count = org_count_result.scalar() or 0
 
