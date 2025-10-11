@@ -1,0 +1,50 @@
+# Set default line endings behavior
+* text=auto eol=lf
+
+# Force LF for specific file types
+*.py text eol=lf
+*.pyi text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+*.rst text eol=lf
+*.html text eol=lf
+*.xml text eol=lf
+*.sql text eol=lf
+
+# Scripts and configuration files
+*.sh text eol=lf
+*.conf text eol=lf
+*.config text eol=lf
+Dockerfile text eol=lf
+*.dockerignore text eol=lf
+docker-compose*.yml text eol=lf
+requirements*.txt text eol=lf
+alembic.ini text eol=lf
+
+# Alembic migration files
+alembic/versions/*.py text eol=lf
+
+# Keep Windows batch files with CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.pyc binary
+*.pyo binary
+*.so binary
+*.egg binary
+*.whl binary

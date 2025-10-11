@@ -1,0 +1,72 @@
+# Multi-stage Dockerfile for monitoring services
+# This Dockerfile is used for Prometheus, Grafana, Loki, and Promtail
+
+FROM alpine:latest AS base
+RUN apk add --no-cache ca-certificates curl
+
+# Prometheus stage
+FROM base AS prometheus
+COPY --from=prom/prometheus:latest /bin/prometheus /bin/prometheus
+COPY --from=prom/prometheus:latest /bin/promtool /bin/promtool
+COPY --from=prom/prometheus:latest /etc/prometheus /etc/prometheus
+
+# Copy custom configuration
+COPY monitoring/prometheus/prometheus.yml /etc/prometheus/prometheus.yml
+COPY monitoring/prometheus/alert_rules.yml /etc/prometheus/alert_rules.yml
+
+EXPOSE 9090
+VOLUME ["/prometheus"]
+WORKDIR /prometheus
+CMD ["/bin/prometheus", "--config.file=/etc/prometheus/prometheus.yml", \
+     "--storage.tsdb.path=/prometheus", \
+     "--web.console.libraries=/etc/prometheus/console_libraries", \
+     "--web.console.templates=/etc/prometheus/consoles", \
+     "--storage.tsdb.retention.time=200h", \
+     "--web.enable-lifecycle"]
+
+# Grafana stage
+FROM base AS grafana
+COPY --from=grafana/grafana:latest /usr/share/grafana /usr/share/grafana
+COPY --from=grafana/grafana:latest /etc/grafana /etc/grafana
+COPY --from=grafana/grafana:latest /run.sh /run.sh
+COPY --from=grafana/grafana:latest /usr/bin/grafana-server /usr/bin/grafana-server
+
+# Copy custom configuration and dashboards
+COPY monitoring/grafana/dashboards/ /etc/grafana/provisioning/dashboards/
+COPY monitoring/grafana/datasources/ /etc/grafana/provisioning/datasources/
+
+# Set Grafana environment variables (from .env file)
+ENV GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+ENV GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+ENV GF_USERS_ALLOW_SIGN_UP=false
+ENV GF_INSTALL_PLUGINS=grafana-piechart-panel
+# Disable anonymous access for security
+ENV GF_AUTH_ANONYMOUS_ENABLED=false
+# Enable basic auth for API access
+ENV GF_AUTH_BASIC_ENABLED=true
+
+EXPOSE 3000
+VOLUME ["/var/lib/grafana"]
+WORKDIR /usr/share/grafana
+CMD ["/run.sh"]
+
+# Loki stage
+FROM base AS loki
+COPY --from=grafana/loki:2.9.0 /usr/bin/loki /usr/bin/loki
+
+# Copy configuration
+COPY monitoring/loki/loki-config.yml /etc/loki/local-config.yaml
+
+EXPOSE 3100
+VOLUME ["/loki"]
+CMD ["/usr/bin/loki", "-config.file=/etc/loki/local-config.yaml"]
+
+# Promtail stage
+FROM base AS promtail
+COPY --from=grafana/promtail:2.9.0 /usr/bin/promtail /usr/bin/promtail
+
+# Copy configuration
+COPY monitoring/promtail/promtail-config.yml /etc/promtail/config.yml
+
+CMD ["/usr/bin/promtail", "-config.file=/etc/promtail/config.yml"]
+

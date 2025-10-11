@@ -28,8 +28,6 @@ share/python-wheels/
 MANIFEST
 
 # PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
 
@@ -46,6 +44,7 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 *.cover
 *.py,cover
 .hypothesis/
@@ -85,11 +84,7 @@ ipython_config.py
 .python-version
 
 # pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
+Pipfile.lock
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow
 __pypackages__/
@@ -110,25 +105,50 @@ ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Environment variables and secrets
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+*.env
 
-# Rope project settings
-.ropeproject
+# Database
+*.db
+*.sqlite3
+*.sqlite
+database.url
 
-# mkdocs documentation
-/site
+# SQL files (schemas, backups, etc.)
+*.sql
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
+# Logs
+*.log
+logs/
+log/
 
-# Pyre type checker
-.pyre/
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
-# IDE
+# FastAPI specific
+.pytest_cache/
+instance/
+.webassets-cache
+
+# SQLAlchemy
+# alembic/versions/*.py  # Commented out to allow migration files
+!alembic/versions/.gitkeep
+
+# Docker
+docker-compose.override.yml
+docker-compose.prod.yml
+docker-compose.local.yml
+.dockerignore
+
+# IDE / Editors
 .vscode/
 .idea/
 *.swp
@@ -144,39 +164,154 @@ dmypy.json
 ehthumbs.db
 Thumbs.db
 
-# Docker
-.dockerignore
+# Certificates and keys
+*.pem
+*.key
+*.cert
+*.crt
+certificates/
+ssl/
 
-# Logs
-*.log
-logs/
+# Secrets and configurations
+secrets/
+config/local/
+config/production/
+config/development/
 
-# Database
-*.db
-*.sqlite
-*.sqlite3
+# Monitoring data
+prometheus_data/
+grafana_data/
+monitoring/loki/data/
+monitoring/grafana/data/
 
 # Temporary files
+tmp/
+temp/
 *.tmp
 *.temp
 
-# Node modules (if any frontend code is added)
-node_modules/
+# Backup files
+*.bak
+*.backup
+backup/
 
-# Coverage reports
-.coverage
-coverage.xml
-htmlcov/
+# AWS / Cloud
+.aws/
+aws-credentials
+gcp-credentials.json
+azure-credentials
+
+# Docker secrets
+docker/secrets/
+.dockerignore.local
+
+# GitHub Actions
+.github/artifacts/
+.github/cache/
+.github/temp/
+
+# Railway deployment
+railway.json
+.railway/
+railway.toml
+.railway.env
+deployment/
+deploy.log
+*.deploy
+
+# PostgreSQL
+*.sql.gz
+*.dump
+*.backup
+
+# Redis
+redis.conf.local
+redis-data/
+
+# RabbitMQ
+rabbitmq-data/
+rabbitmq.conf.local
+
+# Python Package Managers
+poetry.lock
+Pipfile
+pyproject.toml.bak
+
+# Development tools
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+
+# Machine Learning
+*.model
+*.pkl
+*.joblib
+models/
+checkpoints/
+
+# Data files
+data/
+datasets/
+*.csv
+*.json
+*.xml
+*.xlsx
+*.parquet
+
+# API Documentation
+docs/_build/
+site/
+
+# Profiling
+.prof
+
+# Kubernetes
+*.yaml.bak
+k8s-secrets/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
+
+# Ansible
+*.retry
+
+# Monitoring specific
+alertmanager_data/
+loki_data/
+tempo_data/
+
+# Load testing
+*.jmx
+results/
+
+# Node.js (should not be in Python backend)
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# Pyre type checker
+.pyre/
 
 # Alembic
 alembic/versions/*.pyc
 
-# Monitoring data
-monitoring/loki/data/
-monitoring/grafana/data/
-
 # Test artifacts
-.pytest_cache/
 tests/**/*.pyc
 tests/**/__pycache__/
 
