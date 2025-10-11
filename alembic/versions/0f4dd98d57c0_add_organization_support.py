@@ -34,11 +34,11 @@ def upgrade() -> None:
         sa.UniqueConstraint('name')
     )
 
-    # Add organization_id column to app_user
-    op.add_column('app_user', sa.Column('organization_id', sa.UUID(), nullable=True))
+    # Add organization_id column to users (will be renamed to app_user later)
+    op.add_column('users', sa.Column('organization_id', sa.UUID(), nullable=True))
     op.create_foreign_key(
-        'fk_app_user_organization_id',
-        'app_user', 'organization',
+        'fk_users_organization_id',
+        'users', 'organization',
         ['organization_id'], ['id']
     )
 
@@ -52,21 +52,21 @@ def upgrade() -> None:
 
     # Insert roles if they don't exist
     op.execute("""
-        INSERT INTO app_role (name, description)
+        INSERT INTO roles (name)
         VALUES
-            ('ADMIN', 'System administrator with full access to all organizations and data'),
-            ('ORGANIZATION', 'Organization administrator with access to their own organization data'),
-            ('AUDITOR', 'Read-only access for compliance and auditing purposes'),
-            ('DONOR', 'Registered donor with access to their own donations and profile'),
-            ('USER', 'Regular user with basic access')
+            ('ADMIN'),
+            ('ORGANIZATION'),
+            ('AUDITOR'),
+            ('DONOR'),
+            ('USER')
         ON CONFLICT (name) DO NOTHING
     """)
 
 
 def downgrade() -> None:
     # Remove organization_id foreign key and column
-    op.drop_constraint('fk_app_user_organization_id', 'app_user', type_='foreignkey')
-    op.drop_column('app_user', 'organization_id')
+    op.drop_constraint('fk_users_organization_id', 'users', type_='foreignkey')
+    op.drop_column('users', 'organization_id')
 
     # Drop organization table
     op.drop_table('organization')

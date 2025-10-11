@@ -163,7 +163,7 @@ async def shutdown_event():
     logger.info("Application shutting down")
 
 # Include routers
-app.include_router(health_router, prefix="/health", tags=["health"])
+app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])

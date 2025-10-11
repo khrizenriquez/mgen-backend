@@ -6,13 +6,29 @@ import os
 import sys
 import requests
 from pathlib import Path
+import pytest
 
 # Add the app directory to the Python path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Get API base URL from environment
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+
+def check_server_available(base_url=None):
+    """Check if server is available"""
+    if base_url is None:
+        base_url = API_BASE_URL
+    try:
+        response = requests.get(f"{base_url}/health/", timeout=2)
+        return response.status_code == 200
+    except (requests.ConnectionError, requests.Timeout):
+        return False
+
+@pytest.mark.integration
+@pytest.mark.skipif(not check_server_available(), reason=f"Server not running at {API_BASE_URL}")
 def test_user_creation_security():
     """Test that user creation security works correctly"""
-    base_url = "http://localhost:8000"
+    base_url = API_BASE_URL
 
     print("🧪 Testing User Creation Security...\n")
 
@@ -70,9 +86,11 @@ def test_user_creation_security():
     print("\n🎉 All user creation security tests PASSED!")
     return True
 
+@pytest.mark.integration
+@pytest.mark.skipif(not check_server_available(), reason=f"Server not running at {API_BASE_URL}")
 def test_endpoint_protection():
     """Test that endpoints are properly protected"""
-    base_url = "http://localhost:8000"
+    base_url = API_BASE_URL
 
     print("\n🛡️  Testing Endpoint Protection...\n")
 
@@ -111,7 +129,7 @@ def main():
         success &= test_user_creation_security()
         success &= test_endpoint_protection()
     except requests.exceptions.ConnectionError:
-        print("❌ Cannot connect to API server. Make sure it's running on http://localhost:8000")
+        print(f"❌ Cannot connect to API server. Make sure it's running on {API_BASE_URL}")
         return False
     except Exception as e:
         print(f"❌ Test failed with error: {e}")

@@ -30,6 +30,9 @@ def validate_configuration():
             errors.append(f"❌ {var_name}: {description} - NOT SET")
         else:
             print(f"✅ {var_name}: Configured")
+            # Debug: Show first few chars of DATABASE_URL for verification
+            if var_name == 'DATABASE_URL' and value:
+                print(f"   📍 DATABASE_URL starts with: {value[:20]}...")
 
     # Recommended security variables
     recommended_vars = {
@@ -63,8 +66,10 @@ def validate_configuration():
         print("\n🏭 PRODUCTION environment detected:")
 
         # Production-specific checks
-        if os.getenv('DEFAULT_USER_PASSWORD'):
+        default_password = os.getenv('DEFAULT_USER_PASSWORD')
+        if default_password:
             errors.append("❌ DEFAULT_USER_PASSWORD: Should not be set in production")
+            print(f"   ⚠️  DEFAULT_USER_PASSWORD is currently set to: '{default_password[:10]}...'")
 
         if not email_configured:
             errors.append("❌ Email configuration: Required in production for password reset")

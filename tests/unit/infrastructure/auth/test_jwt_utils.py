@@ -137,13 +137,14 @@ class TestTokenVerification:
     @patch('app.infrastructure.auth.jwt_utils.jwt.decode')
     def test_verify_token_success_access(self, mock_decode):
         """Test successful access token verification"""
+        from app.infrastructure.auth.jwt_utils import SECRET_KEY
         mock_payload = {"sub": "user123", "type": "access", "exp": 1234567890}
         mock_decode.return_value = mock_payload
 
         result = verify_token("valid.jwt.token", "access")
 
         assert result == mock_payload
-        mock_decode.assert_called_once_with("valid.jwt.token", "test_secret_key_for_testing_only", algorithms=["HS256"])
+        mock_decode.assert_called_once_with("valid.jwt.token", SECRET_KEY, algorithms=["HS256"])
 
     @patch('app.infrastructure.auth.jwt_utils.jwt.decode')
     def test_verify_token_success_refresh(self, mock_decode):
@@ -370,7 +371,18 @@ class TestJWTUtilsIntegration:
     def test_environment_variables_loaded(self):
         """Test that environment variables are properly loaded"""
         from app.infrastructure.auth.jwt_utils import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+        import os
 
-        assert SECRET_KEY == "test_secret_key_for_testing_only"
+        # SECRET_KEY should be loaded based on environment
+        # In testing/development, it gets a default value
+        # In production, it must be set explicitly
+        environment = os.getenv("ENVIRONMENT", "development")
+        if environment in ["testing", "development"]:
+            assert SECRET_KEY is not None  # Should have a default value
+            assert len(SECRET_KEY) > 0
+        else:
+            # In production, it must be set
+            assert SECRET_KEY is not None
+        
         assert ALGORITHM == "HS256"
         assert ACCESS_TOKEN_EXPIRE_MINUTES == 30

@@ -35,7 +35,8 @@ build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
 sourceDir = "monitoring/promtail"
 
 [environments.production]
-DATABASE_URL = "${{ RAILWAY_PROJECT_ENV.DATABASE_URL }}"
+# Railway automatically provides DATABASE_URL when PostgreSQL is connected
+# DATABASE_URL is automatically set by Railway when a PostgreSQL database is attached
 REDIS_URL = "${{ RAILWAY_PROJECT_ENV.REDIS_URL }}"
 RABBITMQ_URL = "${{ RAILWAY_PROJECT_ENV.RABBITMQ_URL }}"
 
@@ -58,6 +59,14 @@ DEBUG = "false"
 LOG_LEVEL = "INFO"
 SERVICE_NAME = "donations-api"
 VERSION = "1.0.0"
+
+# Database Configuration (Railway provides DATABASE_URL automatically)
+DB_POOL_SIZE = "20"
+DB_MAX_OVERFLOW = "30"
+SQL_ECHO = "false"
+
+# Security (ensure DEFAULT_USER_PASSWORD is NOT set in production)
+# DEFAULT_USER_PASSWORD is intentionally NOT configured for production
 
 # CORS Configuration
 ALLOWED_ORIGINS = "${{ secrets.ALLOWED_ORIGINS }}"
