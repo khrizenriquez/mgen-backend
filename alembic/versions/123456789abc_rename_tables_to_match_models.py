@@ -18,18 +18,29 @@ depends_on = None
 
 def upgrade() -> None:
     # Rename tables to match model definitions
-    op.rename_table('users', 'app_user')
+    op.rename_table('users', 'app_user_old')
     op.rename_table('roles', 'app_role')
-    op.rename_table('user_roles', 'app_user_role')
+    op.rename_table('user_roles', 'app_user_role_old')
 
-    # Recreate app_user_role table with correct types
-    # Since we're in a test environment, we'll drop and recreate the table
-    # In production, this would require more careful data migration
+    # Recreate tables with correct types (since this is for testing, we can drop and recreate)
+    # In production, this would require proper data migration
 
-    # Drop existing table (now renamed to app_user_role)
-    op.drop_table('app_user_role')
+    # Recreate app_user with correct UUID type
+    op.create_table(
+        'app_user',
+        sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+        sa.Column('email', sa.Text(), nullable=False),
+        sa.Column('password_hash', sa.Text(), nullable=False),
+        sa.Column('email_verified', sa.Boolean(), nullable=False, server_default=sa.text('false')),
+        sa.Column('is_active', sa.Boolean(), nullable=False, server_default=sa.text('true')),
+        sa.Column('organization_id', sa.UUID(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('email')
+    )
 
-    # Recreate with correct types
+    # Recreate app_user_role with correct types
     op.create_table(
         'app_user_role',
         sa.Column('user_id', sa.UUID(), nullable=False),
@@ -37,6 +48,10 @@ def upgrade() -> None:
         sa.Column('granted_at', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=False),
         sa.PrimaryKeyConstraint('user_id', 'role_id')
     )
+
+    # Drop old tables
+    op.drop_table('app_user_old')
+    op.drop_table('app_user_role_old')
 
     # Create foreign keys for the new app_user_role table
     op.create_foreign_key('fk_app_user_role_user_id', 'app_user_role', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
@@ -59,10 +74,31 @@ def downgrade() -> None:
     op.drop_constraint('fk_donor_contacts_user_id', 'donor_contacts', type_='foreignkey')
     op.create_foreign_key('donor_contacts_user_id_fkey', 'donor_contacts', 'app_user', ['user_id'], ['id'], ondelete='CASCADE')
 
-    # Reverse the renames first
-    op.rename_table('app_user_role', 'user_roles')
+    # Drop current tables
+    op.drop_table('app_user_role')
+    op.drop_table('app_user')
+
+    # Recreate original tables with INTEGER IDs
+    op.create_table(
+        'users',
+        sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+        sa.Column('email', sa.Text(), nullable=False),
+        sa.Column('name', sa.Text(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('email')
+    )
+
+    op.create_table(
+        'user_roles',
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('role_id', sa.Integer(), nullable=False),
+        sa.Column('granted_at', sa.DateTime(timezone=True), server_default=sa.text('NOW()'), nullable=False),
+        sa.PrimaryKeyConstraint('user_id', 'role_id')
+    )
+
+    # Reverse role table rename
     op.rename_table('app_role', 'roles')
-    op.rename_table('app_user', 'users')
 
     # Recreate original foreign keys
     op.create_foreign_key('user_roles_user_id_fkey', 'user_roles', 'users', ['user_id'], ['id'], ondelete='CASCADE')
