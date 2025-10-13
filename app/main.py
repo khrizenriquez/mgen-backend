@@ -5,6 +5,7 @@ Main FastAPI application with hexagonal architecture
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 import sys
 import subprocess
 from pathlib import Path
