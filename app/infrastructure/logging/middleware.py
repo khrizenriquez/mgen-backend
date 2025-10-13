@@ -36,6 +36,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Generate or extract correlation ID
         request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
         
+        # Skip logging for health checks and metrics endpoints to reduce log volume
+        skip_paths = {"/health", "/health/", "/metrics", "/metrics/"}
+        should_log = request.url.path not in skip_paths
+        
         # Add to structlog context
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(
@@ -49,16 +53,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         # Start timing
         start_time = time.time()
         
-        # Log incoming request
-        self.logger.info(
-            "Request started",
-            method=request.method,
-            path=request.url.path,
-            query_params=str(request.query_params) if request.query_params else None,
-            user_agent=request.headers.get("user-agent", ""),
-            remote_addr=self._get_client_ip(request),
-            request_id=request_id
-        )
+        # Log incoming request (skip health checks and metrics)
+        if should_log:
+            self.logger.info(
+                "Request started",
+                method=request.method,
+                path=request.url.path,
+                query_params=str(request.query_params) if request.query_params else None,
+                user_agent=request.headers.get("user-agent", ""),
+                remote_addr=self._get_client_ip(request),
+                request_id=request_id
+            )
         
         # Process request
         try:
@@ -70,15 +75,16 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             # Add correlation ID to response headers
             response.headers["x-request-id"] = request_id
             
-            # Log successful response
-            self.logger.info(
-                "Request completed",
-                method=request.method,
-                path=request.url.path,
-                status_code=response.status_code,
-                latency_ms=latency_ms,
-                request_id=request_id
-            )
+            # Log successful response (skip health checks and metrics)
+            if should_log:
+                self.logger.info(
+                    "Request completed",
+                    method=request.method,
+                    path=request.url.path,
+                    status_code=response.status_code,
+                    latency_ms=latency_ms,
+                    request_id=request_id
+                )
             
             return response
             
