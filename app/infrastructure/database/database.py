@@ -7,8 +7,14 @@ from sqlalchemy.orm import sessionmaker
 import os
 from typing import Generator
 
-# Load DATABASE_URL from environment
+# Load DATABASE_URL from environment and resolve Railway placeholders
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+# Railway sometimes uses {{POSTGRES_DB}} placeholder - resolve it
+if DATABASE_URL and "{{POSTGRES_DB}}" in DATABASE_URL:
+    postgres_db = os.getenv("POSTGRES_DB", "railway")
+    DATABASE_URL = DATABASE_URL.replace("{{POSTGRES_DB}}", postgres_db)
+    print(f"✅ Resolved DATABASE_URL placeholder: using database '{postgres_db}'")
 
 # Create SQLAlchemy engine
 engine = create_engine(
