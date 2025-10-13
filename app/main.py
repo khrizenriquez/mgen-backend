@@ -9,19 +9,22 @@ import sys
 import subprocess
 from pathlib import Path
 
-# Validate configuration before starting
-print("🔍 Running configuration validation...")
-result = subprocess.run([sys.executable, "scripts/validate_config.py"],
-                       capture_output=True, text=True, cwd=Path(__file__).parent.parent)
+# Validate configuration before starting (only in development)
+if os.getenv("ENVIRONMENT", "development") == "development":
+    print("🔍 Running configuration validation...")
+    result = subprocess.run([sys.executable, "scripts/validate_config.py"],
+                           capture_output=True, text=True, cwd=Path(__file__).parent.parent)
 
-if result.returncode != 0:
-    print("❌ Configuration validation failed!")
-    print(result.stdout)
-    if result.stderr:
-        print("STDERR:", result.stderr)
-    sys.exit(1)
+    if result.returncode != 0:
+        print("❌ Configuration validation failed!")
+        print(result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
+        sys.exit(1)
+    else:
+        print("✅ Configuration validation passed!")
 else:
-    print("✅ Configuration validation passed!")
+    print("⚡ Production mode - skipping configuration validation script")
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -111,8 +114,9 @@ async def add_process_time_header(request, call_next):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup with retry until DB is ready"""
-    max_retries = int(os.getenv("DB_STARTUP_MAX_RETRIES", "30"))
-    wait_seconds = float(os.getenv("DB_STARTUP_WAIT_SECONDS", "2"))
+    # Increased retries and wait time for Railway deployments
+    max_retries = int(os.getenv("DB_STARTUP_MAX_RETRIES", "60"))
+    wait_seconds = float(os.getenv("DB_STARTUP_WAIT_SECONDS", "5"))
 
     for attempt in range(1, max_retries + 1):
         try:
