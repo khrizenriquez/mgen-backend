@@ -87,39 +87,9 @@ app = FastAPI(
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
 
-# Apitally monitoring middleware (if configured and available)
-if APITALLY_AVAILABLE and apitally_client_id:
-    apitally_env = os.getenv("APITALLY_ENV", "prod")
-
-    # Configure logging based on environment to avoid Railway log rate limits
-    if apitally_env == "prod":
-        # Minimal logging for production to avoid Railway rate limits
-        apitally_config = {
-            "enable_request_logging": True,
-            "log_request_headers": False,  # Disable headers logging in prod
-            "log_request_body": False,    # Disable request body logging in prod
-            "log_response_body": False,   # Disable response body logging in prod
-            "capture_logs": False,        # Disable log capture in prod
-        }
-    else:
-        # More verbose logging for development
-        apitally_config = {
-            "enable_request_logging": True,
-            "log_request_headers": True,
-            "log_request_body": False,    # Still disable body logging in dev
-            "log_response_body": False,   # Still disable body logging in dev
-            "capture_logs": True,
-        }
-
-    app.add_middleware(
-        ApitallyMiddleware,
-        client_id=apitally_client_id,
-        env=apitally_env,
-        **apitally_config
-    )
-    print(f"📊 Apitally monitoring enabled (env: {apitally_env}, logging: {'minimal' if apitally_env == 'prod' else 'verbose'})")
-elif apitally_client_id and not APITALLY_AVAILABLE:
-    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
+# Apitally monitoring middleware - COMPLETELY DISABLED due to Railway compatibility issues
+# TODO: Re-enable once Apitally version and Railway environment are compatible
+print("📊 Apitally monitoring disabled (compatibility issues with Railway)")
 
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
