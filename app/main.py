@@ -54,6 +54,7 @@ if apitally_client_id:
 else:
     print("📊 Apitally not configured (optional)")
 
+from app.adapters.controllers.admin_seed_controller import router as admin_seed_router
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
 from app.adapters.controllers.donation_controller import router as donation_router
@@ -221,6 +222,10 @@ try:
     logger.info("Including health router...")
     app.include_router(health_router)
     logger.info("Health router included")
+
+    logger.info("Including admin seed router...")
+    app.include_router(admin_seed_router, prefix="/api/v1", tags=["admin"])
+    logger.info("Admin seed router included")
 
     logger.info("Including auth router...")
     app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
