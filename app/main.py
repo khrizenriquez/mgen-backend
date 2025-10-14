@@ -37,13 +37,21 @@ import logging
 import os
 import structlog
 
-# Apitally monitoring (optional - only if configured)
-try:
-    from apitally.fastapi import ApitallyMiddleware
-    APITALLY_AVAILABLE = True
-except ImportError:
-    APITALLY_AVAILABLE = False
-    print("⚠️  Apitally not available - monitoring disabled")
+# Apitally monitoring (optional - only if configured and available)
+APITALLY_AVAILABLE = False
+ApitallyMiddleware = None
+
+apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
+if apitally_client_id:
+    try:
+        # Try to import apitally dynamically
+        from apitally.fastapi import ApitallyMiddleware
+        APITALLY_AVAILABLE = True
+        print("✅ Apitally package available")
+    except ImportError:
+        print("⚠️  Apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
+else:
+    print("📊 Apitally not configured (optional)")
 
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
@@ -79,26 +87,9 @@ app = FastAPI(
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
 
-# Apitally monitoring middleware (if configured)
-apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
-if APITALLY_AVAILABLE and apitally_client_id:
-    apitally_env = os.getenv("APITALLY_ENV", "prod")
-    app.add_middleware(
-        ApitallyMiddleware,
-        client_id=apitally_client_id,
-        env=apitally_env,
-        # Configure request logging
-        enable_request_logging=True,
-        log_request_headers=True,
-        log_request_body=True,
-        log_response_body=True,
-        capture_logs=True,
-    )
-    print(f"📊 Apitally monitoring enabled (env: {apitally_env})")
-elif apitally_client_id and not APITALLY_AVAILABLE:
-    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed")
-else:
-    print("📊 Apitally monitoring not configured (optional)")
+# Apitally monitoring middleware - COMPLETELY DISABLED due to Railway compatibility issues
+# TODO: Re-enable once Apitally version and Railway environment are compatible
+print("📊 Apitally monitoring disabled (compatibility issues with Railway)")
 
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
