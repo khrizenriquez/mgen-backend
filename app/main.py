@@ -37,13 +37,21 @@ import logging
 import os
 import structlog
 
-# Apitally monitoring (optional - only if configured)
-try:
-    from apitally.fastapi import ApitallyMiddleware
-    APITALLY_AVAILABLE = True
-except ImportError:
-    APITALLY_AVAILABLE = False
-    print("⚠️  Apitally not available - monitoring disabled")
+# Apitally monitoring (optional - only if configured and available)
+APITALLY_AVAILABLE = False
+ApitallyMiddleware = None
+
+apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
+if apitally_client_id:
+    try:
+        # Try to import apitally dynamically
+        from apitally.fastapi import ApitallyMiddleware
+        APITALLY_AVAILABLE = True
+        print("✅ Apitally package available")
+    except ImportError:
+        print("⚠️  Apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
+else:
+    print("📊 Apitally not configured (optional)")
 
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
@@ -79,8 +87,7 @@ app = FastAPI(
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
 
-# Apitally monitoring middleware (if configured)
-apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
+# Apitally monitoring middleware (if configured and available)
 if APITALLY_AVAILABLE and apitally_client_id:
     apitally_env = os.getenv("APITALLY_ENV", "prod")
 
@@ -112,9 +119,7 @@ if APITALLY_AVAILABLE and apitally_client_id:
     )
     print(f"📊 Apitally monitoring enabled (env: {apitally_env}, logging: {'minimal' if apitally_env == 'prod' else 'verbose'})")
 elif apitally_client_id and not APITALLY_AVAILABLE:
-    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed")
-else:
-    print("📊 Apitally monitoring not configured (optional)")
+    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
 
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
