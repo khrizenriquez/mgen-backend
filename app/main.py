@@ -37,13 +37,21 @@ import logging
 import os
 import structlog
 
-# Apitally monitoring (optional - only if configured)
-try:
-    from apitally.fastapi import ApitallyMiddleware
-    APITALLY_AVAILABLE = True
-except ImportError:
-    APITALLY_AVAILABLE = False
-    print("⚠️  Apitally not available - monitoring disabled")
+# Apitally monitoring (optional - only if configured and available)
+APITALLY_AVAILABLE = False
+ApitallyMiddleware = None
+
+apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
+if apitally_client_id:
+    try:
+        # Try to import apitally dynamically
+        from apitally.fastapi import ApitallyMiddleware
+        APITALLY_AVAILABLE = True
+        print("✅ Apitally package available")
+    except ImportError:
+        print("⚠️  Apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
+else:
+    print("📊 Apitally not configured (optional)")
 
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
@@ -79,14 +87,42 @@ app = FastAPI(
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
 
+<<<<<<< HEAD
 # Apitally monitoring middleware (if configured)
 apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
 if APITALLY_AVAILABLE and apitally_client_id:
     apitally_env = os.getenv("APITALLY_ENV", "prod")
+=======
+# Apitally monitoring middleware (if configured and available)
+if APITALLY_AVAILABLE and apitally_client_id:
+    apitally_env = os.getenv("APITALLY_ENV", "prod")
+
+    # Configure logging based on environment to avoid Railway log rate limits
+    if apitally_env == "prod":
+        # Minimal logging for production to avoid Railway rate limits
+        apitally_config = {
+            "enable_request_logging": True,
+            "log_request_headers": False,  # Disable headers logging in prod
+            "log_request_body": False,    # Disable request body logging in prod
+            "log_response_body": False,   # Disable response body logging in prod
+            "capture_logs": False,        # Disable log capture in prod
+        }
+    else:
+        # More verbose logging for development
+        apitally_config = {
+            "enable_request_logging": True,
+            "log_request_headers": True,
+            "log_request_body": False,    # Still disable body logging in dev
+            "log_response_body": False,   # Still disable body logging in dev
+            "capture_logs": True,
+        }
+
+>>>>>>> develop
     app.add_middleware(
         ApitallyMiddleware,
         client_id=apitally_client_id,
         env=apitally_env,
+<<<<<<< HEAD
         # Configure request logging
         enable_request_logging=True,
         log_request_headers=True,
@@ -99,6 +135,13 @@ elif apitally_client_id and not APITALLY_AVAILABLE:
     print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed")
 else:
     print("📊 Apitally monitoring not configured (optional)")
+=======
+        **apitally_config
+    )
+    print(f"📊 Apitally monitoring enabled (env: {apitally_env}, logging: {'minimal' if apitally_env == 'prod' else 'verbose'})")
+elif apitally_client_id and not APITALLY_AVAILABLE:
+    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed - run 'pip install apitally[fastapi]' to enable monitoring")
+>>>>>>> develop
 
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
