@@ -161,49 +161,49 @@ async def startup_event():
         logger.info(f"Attempting database connection (max_retries: {max_retries}, wait_seconds: {wait_seconds})")
 
         for attempt in range(1, max_retries + 1):
-        try:
-            logger.info(f"Database connection attempt {attempt}/{max_retries}")
-            with engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            # Create all tables
-            Base.metadata.create_all(bind=engine)
-            logger.info("Database connected and tables ensured")
-
-            # Update database connections metric
             try:
+                logger.info(f"Database connection attempt {attempt}/{max_retries}")
                 with engine.connect() as conn:
-                    result = conn.execute(text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"))
-                    active_connections = result.fetchone()[0]
-                    DATABASE_CONNECTIONS.set(active_connections)
-                    logger.info(f"Database connections metric updated: {active_connections}")
-            except Exception as e:
-                logger.warning(f"Could not update database connections metric: {e}")
+                    conn.execute(text("SELECT 1"))
+                # Create all tables
+                Base.metadata.create_all(bind=engine)
+                logger.info("Database connected and tables ensured")
 
-            # Run seeders only in development mode
-            if os.getenv("ENVIRONMENT") == "development":
-                logger.info("Running database seeders...")
-                SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-                db = SessionLocal()
+                # Update database connections metric
                 try:
-                    run_seeders(db)
+                    with engine.connect() as conn:
+                        result = conn.execute(text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"))
+                        active_connections = result.fetchone()[0]
+                        DATABASE_CONNECTIONS.set(active_connections)
+                        logger.info(f"Database connections metric updated: {active_connections}")
                 except Exception as e:
-                    logger.error(f"Error running seeders: {e}")
-                finally:
-                    db.close()
+                    logger.warning(f"Could not update database connections metric: {e}")
 
-            break
-        except OperationalError as e:
-            logger.warning(
-                f"Database not ready (attempt {attempt}/{max_retries}): {e}. "
-                f"Retrying in {wait_seconds}s..."
-            )
-            time.sleep(wait_seconds)
-        except Exception as e:
-            logger.error(f"Unexpected error ensuring database: {e}")
-            raise
-    else:
-        # Exhausted retries
-        raise RuntimeError("Database not ready after retries. Startup aborted.")
+                # Run seeders only in development mode
+                if os.getenv("ENVIRONMENT") == "development":
+                    logger.info("Running database seeders...")
+                    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+                    db = SessionLocal()
+                    try:
+                        run_seeders(db)
+                    except Exception as e:
+                        logger.error(f"Error running seeders: {e}")
+                    finally:
+                        db.close()
+
+                break
+            except OperationalError as e:
+                logger.warning(
+                    f"Database not ready (attempt {attempt}/{max_retries}): {e}. "
+                    f"Retrying in {wait_seconds}s..."
+                )
+                time.sleep(wait_seconds)
+            except Exception as e:
+                logger.error(f"Unexpected error ensuring database: {e}")
+                raise
+        else:
+            # Exhausted retries
+            raise RuntimeError("Database not ready after retries. Startup aborted.")
     except Exception as e:
         logger.error(f"Critical error during startup: {e}")
         logger.error("Application startup failed, but continuing to serve requests")
