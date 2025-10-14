@@ -151,12 +151,18 @@ async def add_process_time_header(request, call_next):
 @app.on_event("startup")
 async def startup_event():
     """Initialize database on startup with retry until DB is ready"""
-    # Increased retries and wait time for Railway deployments
-    max_retries = int(os.getenv("DB_STARTUP_MAX_RETRIES", "60"))
-    wait_seconds = float(os.getenv("DB_STARTUP_WAIT_SECONDS", "5"))
+    try:
+        logger.info("Starting application startup sequence...")
 
-    for attempt in range(1, max_retries + 1):
+        # Increased retries and wait time for Railway deployments
+        max_retries = int(os.getenv("DB_STARTUP_MAX_RETRIES", "60"))
+        wait_seconds = float(os.getenv("DB_STARTUP_WAIT_SECONDS", "5"))
+
+        logger.info(f"Attempting database connection (max_retries: {max_retries}, wait_seconds: {wait_seconds})")
+
+        for attempt in range(1, max_retries + 1):
         try:
+            logger.info(f"Database connection attempt {attempt}/{max_retries}")
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             # Create all tables
@@ -169,6 +175,7 @@ async def startup_event():
                     result = conn.execute(text("SELECT count(*) FROM pg_stat_activity WHERE state = 'active'"))
                     active_connections = result.fetchone()[0]
                     DATABASE_CONNECTIONS.set(active_connections)
+                    logger.info(f"Database connections metric updated: {active_connections}")
             except Exception as e:
                 logger.warning(f"Could not update database connections metric: {e}")
 
@@ -197,6 +204,10 @@ async def startup_event():
     else:
         # Exhausted retries
         raise RuntimeError("Database not ready after retries. Startup aborted.")
+    except Exception as e:
+        logger.error(f"Critical error during startup: {e}")
+        logger.error("Application startup failed, but continuing to serve requests")
+        # Don't re-raise - allow app to start even with startup errors
 
 @app.on_event("shutdown")
 async def shutdown_event():
