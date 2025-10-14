@@ -217,13 +217,33 @@ async def shutdown_event():
 
 # Include routers
 logger.info("Including API routers...")
-app.include_router(health_router)
-app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
-app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
-app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
-app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
-# app.include_router(user_router, prefix="/api/v1", tags=["users"])
-logger.info("All routers included successfully")
+try:
+    logger.info("Including health router...")
+    app.include_router(health_router)
+    logger.info("Health router included")
+
+    logger.info("Including auth router...")
+    app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
+    logger.info("Auth router included")
+
+    logger.info("Including dashboard router...")
+    app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
+    logger.info("Dashboard router included")
+
+    logger.info("Including organization router...")
+    app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
+    logger.info("Organization router included")
+
+    logger.info("Including donation router...")
+    app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
+    logger.info("Donation router included")
+
+    # app.include_router(user_router, prefix="/api/v1", tags=["users"])
+    logger.info("All routers included successfully")
+except Exception as e:
+    logger.error(f"Critical error including routers: {e}")
+    logger.error("Application initialization failed")
+    raise
 
 # Debug endpoint to verify app is responding
 @app.get("/debug")
@@ -236,6 +256,13 @@ async def debug():
         "timestamp": datetime.utcnow().isoformat(),
         "service": "donations-api"
     }
+
+# Final initialization check
+logger.info("Application initialization completed successfully")
+logger.info("Available routes:")
+for route in app.routes:
+    if hasattr(route, 'path'):
+        logger.info(f"  {route.methods} {route.path}")
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")
