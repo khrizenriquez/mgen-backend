@@ -47,7 +47,7 @@ async def register_user(
     - **role**: User's role (default: USER, requires admin for elevated roles)
     """
     try:
-        user = await auth_service.register_user(user_data, current_user)
+        user = auth_service.register_user(user_data, current_user)
         logger.info(f"User registered successfully: {user.email}")
 
         # Update metrics - get role from user_roles relationship
@@ -84,7 +84,7 @@ async def login_user(
     - **password**: User's password
     """
     try:
-        user = await auth_service.authenticate_user(user_data)
+        user = auth_service.authenticate_user(user_data)
         if not user:
             # Failed login attempt
             try:
@@ -96,7 +96,7 @@ async def login_user(
                 detail="Incorrect email or password"
             )
 
-        tokens = await auth_service.create_tokens(user)
+        tokens = auth_service.create_tokens(user)
         logger.info(f"User logged in: {user.email}")
 
         # Successful login attempt
@@ -128,7 +128,7 @@ async def refresh_token(
     - **refresh_token**: Valid refresh token
     """
     try:
-        return await auth_service.refresh_access_token(token_data.refresh_token)
+        return auth_service.refresh_access_token(token_data.refresh_token)
     except HTTPException:
         raise
     except Exception as e:
@@ -150,7 +150,7 @@ async def forgot_password(
     - **email**: User's email address
     """
     try:
-        result = await auth_service.initiate_password_reset(request.email)
+        result = auth_service.initiate_password_reset(request.email)
         return GenericResponse(message=result)
     except Exception as e:
         logger.error(f"Forgot password failed: {e}", exc_info=True)
@@ -172,7 +172,7 @@ async def reset_password(
     - **new_password**: New password (min 8 characters)
     """
     try:
-        result = await auth_service.reset_password(request.token, request.new_password)
+        result = auth_service.reset_password(request.token, request.new_password)
         return GenericResponse(message=result)
     except HTTPException:
         raise
@@ -195,7 +195,7 @@ async def verify_email(
     - **token**: Email verification token
     """
     try:
-        result = await auth_service.verify_email(request.token)
+        result = auth_service.verify_email(request.token)
         return GenericResponse(message=result)
     except HTTPException:
         raise
@@ -220,7 +220,7 @@ async def change_password(
     - **new_password**: New password (min 8 characters)
     """
     try:
-        result = await auth_service.change_password(
+        result = auth_service.change_password(
             current_user.id,
             request.current_password,
             request.new_password
@@ -247,7 +247,7 @@ async def logout_user(
     Removes user session on server side. Client should also remove stored tokens.
     """
     try:
-        result = await auth_service.logout_user(current_user)
+        result = auth_service.logout_user(current_user)
         return GenericResponse(message=result)
     except Exception as e:
         logger.error(f"Logout failed: {e}", exc_info=True)
@@ -268,7 +268,7 @@ async def get_dashboard(
     Requires authentication.
     """
     try:
-        return await auth_service.get_dashboard_data(current_user)
+        return auth_service.get_dashboard_data(current_user)
     except Exception as e:
         logger.error(f"Dashboard fetch failed: {e}", exc_info=True)
         raise HTTPException(
@@ -316,7 +316,7 @@ async def upgrade_to_donor(
     Requires authentication. Only regular users can upgrade to donor status.
     """
     try:
-        result = await auth_service.change_user_role_to_donor(current_user.id)
+        result = auth_service.change_user_role_to_donor(current_user.id)
         return GenericResponse(message=result)
     except HTTPException:
         raise
