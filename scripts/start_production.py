@@ -55,11 +55,15 @@ def start_application():
     print("="*60)
 
     # Use uvicorn to start the application
+    # Railway injects PORT environment variable
+    port = os.getenv("PORT", "8000")
+    print(f"🚀 Starting on port: {port}")
+
     os.execvp("uvicorn", [
         "uvicorn",
         "app.main:app",
         "--host", "0.0.0.0",
-        "--port", "8000",
+        "--port", port,
         "--reload"
     ])
 
