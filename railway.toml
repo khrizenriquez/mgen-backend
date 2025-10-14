@@ -3,7 +3,7 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-healthcheckPath = "/health/ping"
+healthcheckPath = "/health/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
@@ -13,7 +13,7 @@ restartPolicyMaxRetries = 10
 # Multi-service deployment configuration
 [services.api]
 build = { builder = "dockerfile", dockerfilePath = "Dockerfile" }
-healthcheckPath = "/health/ping"
+healthcheckPath = "/health/"
 
 [services.prometheus]
 build = { builder = "dockerfile", dockerfilePath = "Dockerfile.monitoring" }
