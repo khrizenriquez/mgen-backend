@@ -56,6 +56,7 @@ else:
 
 from app.adapters.controllers.admin_seed_controller import router as admin_seed_router
 from app.adapters.controllers.auth_controller import router as auth_router
+from app.adapters.controllers.debug_auth_controller import router as debug_auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
@@ -226,6 +227,10 @@ try:
     logger.info("Including admin seed router...")
     app.include_router(admin_seed_router, prefix="/api/v1", tags=["admin"])
     logger.info("Admin seed router included")
+
+    logger.info("Including debug auth router...")
+    app.include_router(debug_auth_router, prefix="/api/v1", tags=["debug"])
+    logger.info("Debug auth router included")
 
     logger.info("Including auth router...")
     app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
