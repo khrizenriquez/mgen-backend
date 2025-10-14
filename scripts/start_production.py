@@ -63,8 +63,7 @@ def start_application():
         "uvicorn",
         "app.main:app",
         "--host", "0.0.0.0",
-        "--port", port,
-        "--reload"
+        "--port", port
     ])
 
 def main():
