@@ -89,15 +89,19 @@ app.add_middleware(LoggingMiddleware)
 
 # Apitally monitoring middleware (enabled for Railway and production)
 if APITALLY_AVAILABLE and apitally_client_id:
-    apitally_env = os.getenv("APITALLY_ENV", "prod")
+    try:
+        apitally_env = os.getenv("APITALLY_ENV", "prod")
 
-    # Use only basic parameters compatible with Railway's Apitally version
-    app.add_middleware(
-        ApitallyMiddleware,
-        client_id=apitally_client_id,
-        env=apitally_env,
-    )
-    print(f"📊 Apitally monitoring enabled (env: {apitally_env})")
+        # Use only basic parameters compatible with Railway's Apitally version
+        app.add_middleware(
+            ApitallyMiddleware,
+            client_id=apitally_client_id,
+            env=apitally_env,
+        )
+        print(f"📊 Apitally monitoring enabled (env: {apitally_env})")
+    except Exception as e:
+        print(f"⚠️  Failed to initialize Apitally monitoring: {e}")
+        print("📊 Continuing without Apitally monitoring")
 elif apitally_client_id and not APITALLY_AVAILABLE:
     print("⚠️  APITALLY_CLIENT_ID configured but apitally package not available")
 else:
