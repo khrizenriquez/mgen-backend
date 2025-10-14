@@ -36,6 +36,7 @@ import time
 import logging
 import os
 import structlog
+from datetime import datetime
 
 # Apitally monitoring (optional - only if configured and available)
 APITALLY_AVAILABLE = False
@@ -215,12 +216,26 @@ async def shutdown_event():
     logger.info("Application shutting down")
 
 # Include routers
+logger.info("Including API routers...")
 app.include_router(health_router)
 app.include_router(auth_router, prefix="/api/v1", tags=["authentication"])
 app.include_router(dashboard_router, prefix="/api/v1", tags=["dashboard"])
 app.include_router(organization_router, prefix="/api/v1", tags=["organizations"])
 app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
 # app.include_router(user_router, prefix="/api/v1", tags=["users"])
+logger.info("All routers included successfully")
+
+# Debug endpoint to verify app is responding
+@app.get("/debug")
+async def debug():
+    """Debug endpoint to verify application is responding"""
+    logger.info("Debug endpoint called - application is alive")
+    return {
+        "status": "ok",
+        "message": "Application is responding correctly",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "donations-api"
+    }
 
 # Metrics endpoint for Prometheus
 @app.get("/metrics")
