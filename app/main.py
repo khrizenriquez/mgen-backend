@@ -333,6 +333,16 @@ async def global_exception_handler(request: Request, exc: Exception):
         headers={"x-request-id": request_id}
     )
 
+# Global error handling for module initialization
+try:
+    logger.info("🎉 FastAPI application created successfully!")
+    logger.info(f"🚀 Application will be served on port: {os.getenv('PORT', '8000')}")
+except Exception as e:
+    print(f"❌ CRITICAL ERROR during module initialization: {e}")
+    import traceback
+    traceback.print_exc()
+    raise
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
