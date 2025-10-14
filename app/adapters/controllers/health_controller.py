@@ -19,13 +19,20 @@ router = APIRouter(
 )
 
 
+@router.get("/ping")
+async def ping():
+    """Ultra simple ping endpoint for Railway health checks"""
+    return {"status": "ok"}
+
 @router.get("/")
 async def health_check():
-    """Basic health check"""
+    """Basic health check - no database dependency"""
+    logger.info("Health check endpoint called")
     return {
         "status": "healthy",
         "service": "donations-api",
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "timestamp": "2025-01-01T00:00:00Z"  # Simple static response
     }
 
 
