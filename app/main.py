@@ -5,6 +5,7 @@ Main FastAPI application with hexagonal architecture
 from dotenv import load_dotenv
 load_dotenv()
 
+import os
 import sys
 import subprocess
 from pathlib import Path
@@ -35,6 +36,14 @@ import time
 import logging
 import os
 import structlog
+
+# Apitally monitoring (optional - only if configured)
+try:
+    from apitally.fastapi import ApitallyMiddleware
+    APITALLY_AVAILABLE = True
+except ImportError:
+    APITALLY_AVAILABLE = False
+    print("⚠️  Apitally not available - monitoring disabled")
 
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
@@ -69,6 +78,27 @@ app = FastAPI(
 
 # Add logging middleware first (before CORS)
 app.add_middleware(LoggingMiddleware)
+
+# Apitally monitoring middleware (if configured)
+apitally_client_id = os.getenv("APITALLY_CLIENT_ID")
+if APITALLY_AVAILABLE and apitally_client_id:
+    apitally_env = os.getenv("APITALLY_ENV", "prod")
+    app.add_middleware(
+        ApitallyMiddleware,
+        client_id=apitally_client_id,
+        env=apitally_env,
+        # Configure request logging
+        enable_request_logging=True,
+        log_request_headers=True,
+        log_request_body=True,
+        log_response_body=True,
+        capture_logs=True,
+    )
+    print(f"📊 Apitally monitoring enabled (env: {apitally_env})")
+elif apitally_client_id and not APITALLY_AVAILABLE:
+    print("⚠️  APITALLY_CLIENT_ID configured but apitally package not installed")
+else:
+    print("📊 Apitally monitoring not configured (optional)")
 
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
