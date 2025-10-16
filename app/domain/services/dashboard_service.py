@@ -308,3 +308,339 @@ class DashboardService:
         except Exception as e:
             logger.error(f"Error calculating donation streak for user {user_id}: {e}", exc_info=True)
             return 0
+
+    def get_impact_metrics(self) -> Dict[str, Any]:
+        """Get real impact metrics for dashboard"""
+        try:
+            # Get approved donations
+            approved_status = self.db.query(StatusCatalogModel).filter(
+                StatusCatalogModel.code == 'APPROVED'
+            ).first()
+
+            if not approved_status:
+                return {
+                    "children_impacted": 0,
+                    "meals_provided": 0,
+                    "scholarships_awarded": 0,
+                    "evangelism_hours": 0
+                }
+
+            # Calculate impact based on donation amounts
+            # This is a simplified calculation - in real implementation,
+            # you might have specific impact tracking tables
+
+            total_donated_result = self.db.query(func.sum(DonationModel.amount_gtq)).filter(
+                DonationModel.status_id == approved_status.id
+            ).scalar()
+
+            total_donated = float(total_donated_result) if total_donated_result else 0.0
+
+            # Simplified impact calculations (adjust based on your business rules)
+            children_impacted = int(total_donated / 50)  # Q50 per child per month
+            meals_provided = int(total_donated / 10)    # Q10 per meal
+            scholarships_awarded = int(total_donated / 1000)  # Q1000 per scholarship
+            evangelism_hours = int(total_donated / 25)   # Q25 per hour
+
+            return {
+                "children_impacted": children_impacted,
+                "meals_provided": meals_provided,
+                "scholarships_awarded": scholarships_awarded,
+                "evangelism_hours": evangelism_hours
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting impact metrics: {e}", exc_info=True)
+            return {
+                "children_impacted": 0,
+                "meals_provided": 0,
+                "scholarships_awarded": 0,
+                "evangelism_hours": 0
+            }
+
+    def get_active_programs(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get active programs with progress information"""
+        try:
+            # For now, return mock programs since we don't have a programs table
+            # In real implementation, this would query a programs table
+
+            programs = [
+                {
+                    "id": "prog-001",
+                    "name": "Campaña de Verano 2025",
+                    "description": "Apoyo estival para niños en situación de vulnerabilidad",
+                    "goal_amount": 15000.00,
+                    "current_amount": 9750.00,
+                    "progress_percentage": 65,
+                    "start_date": "2025-01-01",
+                    "end_date": "2025-03-31",
+                    "status": "active"
+                },
+                {
+                    "id": "prog-002",
+                    "name": "Programa de Becas 2025",
+                    "description": "Educación para el futuro de nuestros niños",
+                    "goal_amount": 25000.00,
+                    "current_amount": 10000.00,
+                    "progress_percentage": 40,
+                    "start_date": "2025-01-01",
+                    "end_date": "2025-12-31",
+                    "status": "active"
+                },
+                {
+                    "id": "prog-003",
+                    "name": "Alimentación Escolar",
+                    "description": "Nutrición para el aprendizaje continuo",
+                    "goal_amount": 12000.00,
+                    "current_amount": 9600.00,
+                    "progress_percentage": 80,
+                    "start_date": "2025-01-01",
+                    "end_date": "2025-12-31",
+                    "status": "active"
+                }
+            ]
+
+            return programs[:limit]
+
+        except Exception as e:
+            logger.error(f"Error getting active programs: {e}", exc_info=True)
+            return []
+
+    def get_upcoming_events(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get upcoming events"""
+        try:
+            # For now, return mock events since we don't have an events table
+            # In real implementation, this would query an events table
+
+            events = [
+                {
+                    "id": "event-001",
+                    "title": "Campaña de Navidad",
+                    "date": "2025-12-01",
+                    "type": "campaign",
+                    "description": "Ayuda a los niños en Navidad",
+                    "location": "Centro Comunitario",
+                    "status": "upcoming"
+                },
+                {
+                    "id": "event-002",
+                    "title": "Día del Niño",
+                    "date": "2025-04-30",
+                    "type": "event",
+                    "description": "Celebración especial para los niños",
+                    "location": "Parque Central",
+                    "status": "upcoming"
+                },
+                {
+                    "id": "event-003",
+                    "title": "Programa de Becas",
+                    "date": "2025-03-15",
+                    "type": "program",
+                    "description": "Apoyo educativo continuo",
+                    "location": "Escuela Principal",
+                    "status": "upcoming"
+                }
+            ]
+
+            # Filter only upcoming events (future dates)
+            current_date = datetime.utcnow().strftime('%Y-%m-%d')
+            upcoming_events = [event for event in events if event['date'] >= current_date]
+
+            return upcoming_events[:limit]
+
+        except Exception as e:
+            logger.error(f"Error getting upcoming events: {e}", exc_info=True)
+            return []
+
+    def get_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """Get user preferences"""
+        try:
+            # For now, return default preferences since we don't have a preferences table
+            # In real implementation, this would query user preferences
+
+            user = self.db.query(UserModel).filter(UserModel.id == user_id).first()
+
+            if not user:
+                return {
+                    "favorite_cause": "Programa General",
+                    "communication_preferences": {
+                        "email_notifications": True,
+                        "sms_notifications": False,
+                        "monthly_reports": True
+                    },
+                    "privacy_settings": {
+                        "show_donations_publicly": False,
+                        "allow_contact": True
+                    }
+                }
+
+            # Calculate favorite cause based on donation patterns
+            # For now, return mock data
+            favorite_cause = "Programa General"
+
+            return {
+                "favorite_cause": favorite_cause,
+                "communication_preferences": {
+                    "email_notifications": True,
+                    "sms_notifications": False,
+                    "monthly_reports": True
+                },
+                "privacy_settings": {
+                    "show_donations_publicly": False,
+                    "allow_contact": True
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting user preferences for user {user_id}: {e}", exc_info=True)
+            return {
+                "favorite_cause": "Programa General",
+                "communication_preferences": {
+                    "email_notifications": True,
+                    "sms_notifications": False,
+                    "monthly_reports": True
+                },
+                "privacy_settings": {
+                    "show_donations_publicly": False,
+                    "allow_contact": True
+                }
+            }
+
+    def get_user_levels(self, user_id: str) -> Dict[str, Any]:
+        """Get user level and rewards information"""
+        try:
+            # Get user's total donations
+            total_amount_result = self.db.query(func.sum(DonationModel.amount_gtq)).filter(
+                DonationModel.user_id == user_id
+            ).scalar()
+            total_donated = float(total_amount_result) if total_amount_result else 0.0
+
+            # Define level thresholds (in Q)
+            levels = [
+                {"name": "Donante Bronce", "threshold": 0, "color": "warning"},
+                {"name": "Donante Plata", "threshold": 1000, "color": "secondary"},
+                {"name": "Donante Oro", "threshold": 5000, "color": "warning"},
+                {"name": "Donante Platino", "threshold": 15000, "color": "primary"},
+                {"name": "Donante Diamante", "threshold": 50000, "color": "info"},
+                {"name": "Donante Leyenda", "threshold": 100000, "color": "success"}
+            ]
+
+            # Find current level
+            current_level = levels[0]
+            next_level = None
+
+            for i, level in enumerate(levels):
+                if total_donated >= level["threshold"]:
+                    current_level = level
+                    if i + 1 < len(levels):
+                        next_level = levels[i + 1]
+
+            # Calculate progress to next level
+            progress_percentage = 0
+            next_level_threshold = 0
+
+            if next_level:
+                current_level_threshold = current_level["threshold"]
+                next_level_threshold = next_level["threshold"]
+                progress_percentage = min(100, ((total_donated - current_level_threshold) /
+                                               (next_level_threshold - current_level_threshold)) * 100)
+            else:
+                progress_percentage = 100  # Max level reached
+
+            return {
+                "current_level": current_level["name"],
+                "current_level_color": current_level["color"],
+                "next_level": next_level["name"] if next_level else None,
+                "total_donated": total_donated,
+                "progress_percentage": progress_percentage,
+                "next_level_threshold": next_level_threshold,
+                "amount_needed": max(0, next_level_threshold - total_donated) if next_level else 0
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting user levels for user {user_id}: {e}", exc_info=True)
+            return {
+                "current_level": "Donante Bronce",
+                "current_level_color": "warning",
+                "next_level": "Donante Plata",
+                "total_donated": 0.0,
+                "progress_percentage": 0,
+                "next_level_threshold": 1000,
+                "amount_needed": 1000
+            }
+
+    def get_growth_metrics(self) -> Dict[str, Any]:
+        """Get growth metrics compared to previous period"""
+        try:
+            # Calculate current month metrics
+            current_date = datetime.utcnow()
+            current_month_start = current_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            current_month_end = current_date
+
+            # Previous month
+            if current_date.month == 1:
+                prev_month_start = current_date.replace(year=current_date.year-1, month=12, day=1, hour=0, minute=0, second=0, microsecond=0)
+                prev_month_end = current_date.replace(year=current_date.year-1, month=12, day=31, hour=23, minute=59, second=59, microsecond=999999)
+            else:
+                prev_month_start = current_date.replace(month=current_date.month-1, day=1, hour=0, minute=0, second=0, microsecond=0)
+                prev_month_end = current_date.replace(month=current_date.month-1, day=1, hour=23, minute=59, second=59, microsecond=999999) - timedelta(days=1)
+
+            # Current month users
+            current_users = self.db.query(func.count(UserModel.id)).filter(
+                UserModel.created_at.between(current_month_start, current_month_end)
+            ).scalar()
+
+            # Previous month users
+            prev_users = self.db.query(func.count(UserModel.id)).filter(
+                UserModel.created_at.between(prev_month_start, prev_month_end)
+            ).scalar()
+
+            # Current month donations and amount
+            current_donations = self.db.query(func.count(DonationModel.id)).filter(
+                DonationModel.created_at.between(current_month_start, current_month_end)
+            ).scalar()
+
+            current_amount_result = self.db.query(func.sum(DonationModel.amount_gtq)).filter(
+                DonationModel.created_at.between(current_month_start, current_month_end)
+            ).scalar()
+            current_amount = float(current_amount_result) if current_amount_result else 0.0
+
+            # Previous month donations and amount
+            prev_donations = self.db.query(func.count(DonationModel.id)).filter(
+                DonationModel.created_at.between(prev_month_start, prev_month_end)
+            ).scalar()
+
+            prev_amount_result = self.db.query(func.sum(DonationModel.amount_gtq)).filter(
+                DonationModel.created_at.between(prev_month_start, prev_month_end)
+            ).scalar()
+            prev_amount = float(prev_amount_result) if prev_amount_result else 0.0
+
+            # Calculate growth percentages
+            users_growth = ((current_users - prev_users) / prev_users * 100) if prev_users > 0 else 0
+            donations_growth = ((current_donations - prev_donations) / prev_donations * 100) if prev_donations > 0 else 0
+            amount_growth = ((current_amount - prev_amount) / prev_amount * 100) if prev_amount > 0 else 0
+
+            return {
+                "users_growth_percentage": round(users_growth, 1),
+                "donations_growth_percentage": round(donations_growth, 1),
+                "amount_growth_percentage": round(amount_growth, 1),
+                "current_month": {
+                    "users": current_users,
+                    "donations": current_donations,
+                    "amount": current_amount
+                },
+                "previous_month": {
+                    "users": prev_users,
+                    "donations": prev_donations,
+                    "amount": prev_amount
+                }
+            }
+
+        except Exception as e:
+            logger.error(f"Error getting growth metrics: {e}", exc_info=True)
+            return {
+                "users_growth_percentage": 0.0,
+                "donations_growth_percentage": 0.0,
+                "amount_growth_percentage": 0.0,
+                "current_month": {"users": 0, "donations": 0, "amount": 0.0},
+                "previous_month": {"users": 0, "donations": 0, "amount": 0.0}
+            }

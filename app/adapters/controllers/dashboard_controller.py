@@ -3,10 +3,11 @@ Dashboard Controller - HTTP API endpoints for dashboard data
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from app.adapters.schemas.dashboard_schemas import (
-    DashboardStats, DonorDashboardStats, UserDashboardStats, DashboardResponse
+    DashboardStats, DonorDashboardStats, UserDashboardStats, DashboardResponse,
+    ImpactMetrics, ActiveProgram, UpcomingEvent, UserPreferences, UserLevels
 )
 from app.domain.services.dashboard_service import DashboardService
 from app.infrastructure.database.database import get_db
@@ -54,6 +55,13 @@ async def get_dashboard_stats(
             stats["recent_users"] = dashboard_service.get_recent_users(limit=5)
             stats["recent_donations"] = dashboard_service.get_recent_donations(limit=5)
 
+            # Add growth metrics
+            growth_metrics = dashboard_service.get_growth_metrics()
+            stats["growth_metrics"] = growth_metrics
+
+            # Add system health (simplified - could be from health endpoint)
+            stats["system_health"] = 98  # This could be calculated based on various factors
+
             # Add recent activity
             recent_activity = [
                 {"type": "user_registered", "message": f"Nuevo usuario: {user['email']}", "timestamp": user["joined_at"]}
@@ -67,6 +75,12 @@ async def get_dashboard_stats(
             # Donor gets personal stats
             donor_stats = dashboard_service.get_donor_stats(str(current_user.id))
             donor_stats["my_donations"] = dashboard_service.get_user_donations(str(current_user.id), limit=5)
+
+            # Add impact metrics for donor
+            impact_metrics = dashboard_service.get_impact_metrics()
+            donor_stats["impact_children"] = impact_metrics["children_impacted"]
+            donor_stats["next_reward"] = dashboard_service.get_user_levels(str(current_user.id))["next_level"] or "Donante Platino"
+
             stats = donor_stats
 
             # Add recent activity
@@ -78,6 +92,14 @@ async def get_dashboard_stats(
         else:
             # Regular user gets basic system stats
             stats = dashboard_service.get_user_stats(str(current_user.id))
+
+            # Add user-specific fields
+            user_prefs = dashboard_service.get_user_preferences(str(current_user.id))
+            user_levels = dashboard_service.get_user_levels(str(current_user.id))
+
+            stats["favorite_cause"] = user_prefs["favorite_cause"]
+            stats["next_milestone"] = user_levels["next_level_threshold"]
+            stats["current_progress"] = user_levels["total_donated"]
 
             # Add recent activity (system-wide)
             recent_donations = dashboard_service.get_recent_donations(limit=3)
@@ -187,3 +209,132 @@ async def get_my_donations(
     except Exception as e:
         logger.error(f"Error getting user donations: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Error loading donation history")
+
+
+@router.get("/dashboard/impact", response_model=ImpactMetrics)
+async def get_impact_metrics(
+    dashboard_service: DashboardService = Depends(get_dashboard_service)
+):
+    """
+    Get real impact metrics for the system
+
+    Returns aggregated impact data based on approved donations.
+    """
+    try:
+        logger.info("Fetching impact metrics")
+
+        impact_data = dashboard_service.get_impact_metrics()
+
+        logger.info("Impact metrics retrieved successfully")
+        return impact_data
+
+    except Exception as e:
+        logger.error(
+            "Error getting impact metrics",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Error loading impact metrics")
+
+
+@router.get("/dashboard/programs/active", response_model=List[ActiveProgram])
+async def get_active_programs(
+    limit: int = 10,
+    dashboard_service: DashboardService = Depends(get_dashboard_service)
+):
+    """
+    Get active programs with progress information
+
+    Returns list of active programs showing fundraising progress.
+    """
+    try:
+        logger.info("Fetching active programs", limit=limit)
+
+        programs = dashboard_service.get_active_programs(limit=limit)
+
+        logger.info(f"Retrieved {len(programs)} active programs")
+        return programs
+
+    except Exception as e:
+        logger.error(f"Error getting active programs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error loading active programs")
+
+
+@router.get("/dashboard/events/upcoming", response_model=List[UpcomingEvent])
+async def get_upcoming_events(
+    limit: int = 10,
+    dashboard_service: DashboardService = Depends(get_dashboard_service)
+):
+    """
+    Get upcoming events
+
+    Returns list of upcoming events filtered by future dates.
+    """
+    try:
+        logger.info("Fetching upcoming events", limit=limit)
+
+        events = dashboard_service.get_upcoming_events(limit=limit)
+
+        logger.info(f"Retrieved {len(events)} upcoming events")
+        return events
+
+    except Exception as e:
+        logger.error(f"Error getting upcoming events: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Error loading upcoming events")
+
+
+@router.get("/user/preferences", response_model=UserPreferences)
+async def get_user_preferences(
+    current_user = Depends(get_current_active_user),
+    dashboard_service: DashboardService = Depends(get_dashboard_service)
+):
+    """
+    Get current user's preferences
+
+    Returns user's communication preferences, favorite causes, and privacy settings.
+    """
+    try:
+        logger.info("Fetching user preferences", user_email=current_user.email)
+
+        preferences = dashboard_service.get_user_preferences(str(current_user.id))
+
+        logger.info("User preferences retrieved successfully")
+        return preferences
+
+    except Exception as e:
+        logger.error(
+            "Error getting user preferences",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Error loading user preferences")
+
+
+@router.get("/user/levels", response_model=UserLevels)
+async def get_user_levels(
+    current_user = Depends(get_current_active_user),
+    dashboard_service: DashboardService = Depends(get_dashboard_service)
+):
+    """
+    Get current user's level and rewards information
+
+    Returns user's current level, progress to next level, and rewards data.
+    """
+    try:
+        logger.info("Fetching user levels", user_email=current_user.email)
+
+        levels_data = dashboard_service.get_user_levels(str(current_user.id))
+
+        logger.info("User levels retrieved successfully")
+        return levels_data
+
+    except Exception as e:
+        logger.error(
+            "Error getting user levels",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True
+        )
+        raise HTTPException(status_code=500, detail="Error loading user levels")
