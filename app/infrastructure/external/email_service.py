@@ -4,26 +4,31 @@ Email service for sending notifications and password resets
 import os
 from typing import Optional
 
-from mailjet_rest import Client
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content
 from app.infrastructure.logging import get_logger
 
 logger = get_logger(__name__)
 
 
 class EmailService:
-    """Service for sending emails via Mailjet API"""
+    """Service for sending emails via SendGrid API"""
 
     def __init__(self):
-        self.api_key = os.getenv("MAILJET_API_KEY")
-        self.api_secret = os.getenv("MAILJET_API_SECRET")
+        self.api_key = os.getenv("SENDGRID_API_KEY")
         self.from_email = os.getenv("FROM_EMAIL", "noreply@donacionesgt.org")
         self.from_name = os.getenv("FROM_NAME", "Sistema de Donaciones")
 
-        if self.api_key and self.api_secret:
-            self.mailjet = Client(auth=(self.api_key, self.api_secret))
+        if self.api_key:
+            self.sendgrid = SendGridAPIClient(api_key=self.api_key)
         else:
-            self.mailjet = None
-            logger.warning("Mailjet API credentials not configured")
+            self.sendgrid = None
+            logger.warning("SendGrid API key not configured")
+
+        # Validate FRONTEND_URL for email functionality that requires it
+        self.frontend_url = os.getenv('FRONTEND_URL')
+        if not self.frontend_url:
+            logger.warning("FRONTEND_URL environment variable not set - password reset and email verification will fail")
 
     def send_email(
         self,
@@ -45,56 +50,45 @@ class EmailService:
             bool: True if email was sent successfully
         """
         try:
-            if not self.mailjet:
-                logger.error("Mailjet client not initialized - check API credentials")
+            if not self.sendgrid:
+                logger.error("SendGrid client not initialized - check API key")
                 return False
 
-            data = {
-                'Messages': [
-                    {
-                        "From": {
-                            "Email": self.from_email,
-                            "Name": self.from_name
-                        },
-                        "To": [
-                            {
-                                "Email": to_email
-                            }
-                        ],
-                        "Subject": subject,
-                        "HTMLPart": html_content,
-                    }
-                ]
-            }
+            # Create email message
+            from_email = Email(email=self.from_email, name=self.from_name)
+            to_email_obj = To(to_email)
 
+            mail = Mail(from_email, to_email_obj, subject, Content("text/html", html_content))
+
+            # Add text content if provided
             if text_content:
-                data['Messages'][0]['TextPart'] = text_content
+                mail.add_content(Content("text/plain", text_content))
 
-            result = self.mailjet.send.create(data=data)
+            # Send email
+            response = self.sendgrid.send(mail)
 
-            if result.status_code == 200:
-                response_data = result.json()
-                if response_data.get('Messages', [{}])[0].get('Status') == 'success':
-                    logger.info(f"Email sent successfully to: {to_email}")
-                    return True
-                else:
-                    logger.error(f"Mailjet reported failure for {to_email}: {response_data}")
-                    return False
+            if response.status_code in [200, 201, 202]:
+                logger.info("Email sent successfully to: {to_email}")
+                return True
             else:
-                logger.error(f"Mailjet API error for {to_email}: {result.status_code} - {result.text}")
+                logger.error(
+                    "SendGrid reported failure for {to_email}: {response.status_code} - {response.body}",
+                    to_email=to_email,
+                    status_code=response.status_code,
+                    response_body=response.body.decode('utf-8') if hasattr(response, 'body') else str(response)
+                )
                 return False
 
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {e}", exc_info=True)
+            logger.error("Failed to send email to {to_email}: {error}", to_email=to_email, error=str(e), exc_info=True)
             return False
 
     def send_password_reset_email(self, to_email: str, reset_token: str) -> bool:
         """Send password reset email"""
-        frontend_url = os.getenv('FRONTEND_URL')
-        if not frontend_url:
+        if not self.frontend_url:
             logger.error("FRONTEND_URL environment variable not set")
             return False
-        reset_url = f"{frontend_url}/reset-password?token={reset_token}"
+        reset_url = f"{self.frontend_url}/reset-password?token={reset_token}"
 
         subject = "Password Reset Request"
         html_content = f"""
@@ -131,11 +125,10 @@ class EmailService:
 
     def send_email_verification_email(self, to_email: str, verification_token: str) -> bool:
         """Send email verification email"""
-        frontend_url = os.getenv('FRONTEND_URL')
-        if not frontend_url:
+        if not self.frontend_url:
             logger.error("FRONTEND_URL environment variable not set")
             return False
-        verification_url = f"{frontend_url}/verify-email?token={verification_token}"
+        verification_url = f"{self.frontend_url}/verify-email?token={verification_token}"
 
         subject = "Verify Your Email Address"
         html_content = f"""

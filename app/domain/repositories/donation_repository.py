@@ -35,10 +35,12 @@ class DonationRepository(ABC):
     
     @abstractmethod
     async def get_all(
-        self, 
-        limit: int = 100, 
+        self,
+        limit: int = 100,
         offset: int = 0,
-        status: Optional[DonationStatus] = None
+        status: Optional[DonationStatus] = None,
+        organization_id: Optional[UUID] = None,
+        user_id: Optional[UUID] = None
     ) -> List[Donation]:
         """Get all donations with optional filtering"""
         pass
