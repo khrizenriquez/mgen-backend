@@ -41,10 +41,8 @@ class DashboardStats(BaseModel):
     total_donations: int = Field(..., description="Total number of donations")
     total_amount_gtq: float = Field(..., description="Total donation amount in GTQ")
     pending_donations: int = Field(..., description="Number of pending donations")
-    system_health: int = Field(..., description="System health percentage")
-    recent_users: List[UserSummary] = Field(..., description="Recent user registrations")
-    recent_donations: List[DonationSummary] = Field(..., description="Recent donations")
-    growth_metrics: GrowthMetrics = Field(..., description="Growth metrics vs previous period")
+    recent_users: Optional[List[UserSummary]] = Field(None, description="Recent user registrations")
+    recent_donations: Optional[List[DonationSummary]] = Field(None, description="Recent donations")
 
 
 class ImpactMetrics(BaseModel):
