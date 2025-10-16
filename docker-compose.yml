@@ -22,9 +22,8 @@ services:
       - RATE_LIMIT_WINDOW=${RATE_LIMIT_WINDOW}
       # Default user password (only for development)
       - DEFAULT_USER_PASSWORD=${DEFAULT_USER_PASSWORD}
-      # Mailjet email service (credentials from .env file)
-      - MAILJET_API_KEY=${MAILJET_API_KEY}
-      - MAILJET_API_SECRET=${MAILJET_API_SECRET}
+      # SendGrid email service (credentials from .env file)
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - FROM_EMAIL=${FROM_EMAIL}
       - FROM_NAME=${FROM_NAME}
       - FRONTEND_URL=${FRONTEND_URL}

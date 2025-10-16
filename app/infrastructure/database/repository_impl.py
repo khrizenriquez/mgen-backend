@@ -87,21 +87,34 @@ class SQLAlchemyDonationRepository(DonationRepository):
         return [self._model_to_entity(model) for model in models]
     
     async def get_all(
-        self, 
-        limit: int = 100, 
+        self,
+        limit: int = 100,
         offset: int = 0,
-        status: Optional[DonationStatus] = None
+        status: Optional[DonationStatus] = None,
+        organization_id: Optional[UUID] = None,
+        user_id: Optional[UUID] = None
     ) -> List[Donation]:
         """Get all donations with optional filtering"""
+        from app.infrastructure.database.models import UserModel
+
         query = self.db.query(DonationModel)
-        
+
         if status:
             query = query.filter(DonationModel.status_id == status.value)
-        
+
+        if organization_id:
+            # Join with UserModel to filter by organization
+            query = query.join(UserModel, DonationModel.user_id == UserModel.id).filter(
+                UserModel.organization_id == organization_id
+            )
+
+        if user_id:
+            query = query.filter(DonationModel.user_id == user_id)
+
         models = query.order_by(
             DonationModel.created_at.desc()
         ).offset(offset).limit(limit).all()
-        
+
         return [self._model_to_entity(model) for model in models]
     
     async def update(self, donation: Donation) -> Donation:

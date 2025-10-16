@@ -37,16 +37,21 @@ def seed_organization(db: Session) -> None:
     ).first()
 
     if not org:
+        # Get configurable organization data from environment variables
+        default_org_name = os.getenv("DEFAULT_ORGANIZATION_NAME", "Más Generosidad Guatemala")
+        default_org_description = os.getenv("DEFAULT_ORGANIZATION_DESCRIPTION", "Organización principal de donaciones en Guatemala")
+        default_org_email = os.getenv("DEFAULT_ORGANIZATION_EMAIL", "contacto@masgenerosidad.org")
+
         org = OrganizationModel(
             id="550e8400-e29b-41d4-a716-446655440000",
-            name="Fundación Donaciones Guatemala",
-            description="Organización principal de donaciones en Guatemala",
-            contact_email="contacto@donacionesgt.org",
+            name=default_org_name,
+            description=default_org_description,
+            contact_email=default_org_email,
             is_active=True
         )
         db.add(org)
         db.commit()
-        logger.info("Created default organization: Fundación Donaciones Guatemala")
+        logger.info(f"Created default organization: {default_org_name}")
 
 
 def seed_default_users(db: Session) -> None:
@@ -77,24 +82,28 @@ def seed_default_users(db: Session) -> None:
         logger.error(f"Failed to hash password: {e}")
         return
 
-    # Default users data
+    # Default users data (configurable via environment variables)
+    default_admin_email = os.getenv("DEFAULT_ADMIN_EMAIL", "adminseminario@test.com")
+    default_donor_email = os.getenv("DEFAULT_DONOR_EMAIL", "donorseminario@test.com")
+    default_user_email = os.getenv("DEFAULT_USER_EMAIL", "userseminario@test.com")
+
     default_users = [
         {
-            "email": "adminseminario@test.com",
+            "email": default_admin_email,
             "password_hash": hashed_password,
             "role": admin_role,
             "email_verified": True,
             "is_active": True
         },
         {
-            "email": "donorseminario@test.com",
+            "email": default_donor_email,
             "password_hash": hashed_password,
             "role": donor_role,
             "email_verified": True,
             "is_active": True
         },
         {
-            "email": "userseminario@test.com",
+            "email": default_user_email,
             "password_hash": hashed_password,
             "role": user_role,  # This will be upgraded to DONOR later
             "email_verified": True,
