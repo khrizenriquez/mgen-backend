@@ -41,7 +41,7 @@ async def get_dashboard_stats(
         logger.info("Fetching dashboard stats", user_email=current_user.email)
 
         # Check user roles
-        user_roles = [role.name for role in current_user.user_roles]
+        user_roles = [user_role.role.name for user_role in current_user.user_roles]
         is_admin = "ADMIN" in user_roles
         is_donor = "DONOR" in user_roles
 
