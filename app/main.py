@@ -118,7 +118,8 @@ app.add_middleware(
 )
 
 # CORS middleware - Restrictive configuration for security
-allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+default_origins = "http://localhost:3000,http://localhost:5173,https://masgenerosidad.org,https://www.masgenerosidad.org,https://app.masgenerosidad.org"
+allowed_origins = os.getenv("ALLOWED_ORIGINS", default_origins).split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -248,7 +249,10 @@ try:
     app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
     logger.info("Donation router included")
 
-    # app.include_router(user_router, prefix="/api/v1", tags=["users"])
+    logger.info("Including user router...")
+    app.include_router(user_router, prefix="/api/v1", tags=["users"])
+    logger.info("User router included")
+
     logger.info("All routers included successfully")
 except Exception as e:
     logger.error(f"Critical error including routers: {e}")
