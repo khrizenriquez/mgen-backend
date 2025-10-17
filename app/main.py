@@ -113,7 +113,7 @@ else:
 # Rate limiting middleware (before CORS for auth endpoints)
 app.add_middleware(
     RateLimitMiddleware,
-    max_requests=int(os.getenv("RATE_LIMIT_REQUESTS", "10")),
+    max_requests=int(os.getenv("RATE_LIMIT_REQUESTS", "100")),
     window_seconds=int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 )
 
