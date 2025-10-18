@@ -71,7 +71,7 @@ async def create_user(
 
 
 # CRUD endpoints
-@router.get("/profile", response_model=UserProfileResponse)
+@router.get("/me/profile", response_model=UserProfileResponse)
 async def get_user_profile(
     current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
@@ -95,7 +95,7 @@ async def get_user_profile(
     )
 
 
-@router.put("/profile", response_model=UserProfileResponse)
+@router.put("/me/profile", response_model=UserProfileResponse)
 async def update_user_profile(
     profile_data: UserProfileUpdate,
     current_user = Depends(get_current_active_user),
@@ -121,7 +121,7 @@ async def update_user_profile(
     )
 
 
-@router.post("/change-password")
+@router.post("/me/change-password")
 async def change_password(
     password_data: ChangePasswordRequest,
     current_user = Depends(get_current_active_user),
@@ -140,7 +140,7 @@ async def change_password(
     return result
 
 
-@router.get("/preferences", response_model=UserPreferencesResponse)
+@router.get("/me/preferences", response_model=UserPreferencesResponse)
 async def get_user_preferences(
     current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
@@ -171,7 +171,7 @@ async def get_user_preferences(
     )
 
 
-@router.put("/preferences", response_model=UserPreferencesResponse)
+@router.put("/me/preferences", response_model=UserPreferencesResponse)
 async def update_user_preferences(
     preferences_data: UserPreferencesUpdate,
     current_user = Depends(get_current_active_user),
