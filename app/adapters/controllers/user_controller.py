@@ -10,8 +10,14 @@ from app.adapters.schemas.user_schemas import (
     UserUpdate,
     UserResponse,
     UserListResponse,
-    DeleteResponse
+    DeleteResponse,
+    UserProfileUpdate,
+    UserProfileResponse,
+    ChangePasswordRequest,
+    UserPreferencesUpdate,
+    UserPreferencesResponse
 )
+from app.adapters.schemas.dashboard_schemas import UserPreferencesResponse as DashboardUserPreferencesResponse
 from app.adapters.schemas.auth_schemas import UserInfo
 from app.domain.entities.user import User
 from app.domain.services.user_service import UserService
@@ -208,4 +214,147 @@ async def delete_user(
 
     result = await user_service.delete_user(user_id)
     return result
+
+
+# Profile and preferences endpoints
+@router.get("/profile", response_model=UserProfileResponse)
+async def get_user_profile(
+    current_user = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Get current user's complete profile
+
+    Returns the user's profile information including contact details.
+    """
+    user = await user_service.get_user_profile(str(current_user.id))
+    return UserProfileResponse(
+        id=user.id,
+        email=user.email,
+        first_name=user.first_name,
+        last_name=user.last_name,
+        phone=user.phone,
+        address=user.address,
+        is_active=user.is_active,
+        created_at=user.created_at,
+        updated_at=user.updated_at
+    )
+
+
+@router.put("/profile", response_model=UserProfileResponse)
+async def update_user_profile(
+    profile_data: UserProfileUpdate,
+    current_user = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Update current user's profile
+
+    Updates profile information like name, phone, and address.
+    """
+    updated_user = await user_service.update_profile(str(current_user.id), profile_data.dict(exclude_unset=True))
+
+    return UserProfileResponse(
+        id=updated_user.id,
+        email=updated_user.email,
+        first_name=updated_user.first_name,
+        last_name=updated_user.last_name,
+        phone=updated_user.phone,
+        address=updated_user.address,
+        is_active=updated_user.is_active,
+        created_at=updated_user.created_at,
+        updated_at=updated_user.updated_at
+    )
+
+
+@router.post("/change-password")
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Change current user's password
+
+    Requires current password for verification and new password (minimum 8 characters).
+    """
+    result = await user_service.change_password(
+        str(current_user.id),
+        password_data.current_password,
+        password_data.new_password
+    )
+    return result
+
+
+@router.get("/preferences", response_model=DashboardUserPreferencesResponse)
+async def get_user_preferences(
+    current_user = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Get current user's preferences
+
+    Returns user's communication preferences, favorite cause, and privacy settings.
+    """
+    user = await user_service.get_user_profile(str(current_user.id))
+
+    # Get preferences from user entity (with defaults)
+    preferences = user.preferences or {}
+    communication_prefs = preferences.get('communication_preferences', {
+        'email_notifications': True,
+        'sms_notifications': False,
+        'monthly_reports': True
+    })
+    privacy_settings = preferences.get('privacy_settings', {
+        'show_donations_publicly': False,
+        'allow_contact': True
+    })
+
+    return DashboardUserPreferencesResponse(
+        favorite_cause=preferences.get('favorite_cause', 'Programa General'),
+        communication_preferences=communication_prefs,
+        privacy_settings=privacy_settings
+    )
+
+
+@router.put("/preferences", response_model=DashboardUserPreferencesResponse)
+async def update_user_preferences(
+    preferences_data: UserPreferencesUpdate,
+    current_user = Depends(get_current_active_user),
+    user_service: UserService = Depends(get_user_service)
+):
+    """
+    Update current user's preferences
+
+    Updates communication preferences, favorite cause, and privacy settings.
+    """
+    # Get current preferences
+    current_user_obj = await user_service.get_user_profile(str(current_user.id))
+    current_prefs = current_user_obj.preferences or {}
+
+    # Update preferences
+    updated_prefs = current_prefs.copy()
+
+    if preferences_data.communication_preferences:
+        updated_prefs['communication_preferences'] = preferences_data.communication_preferences
+
+    if preferences_data.privacy_settings:
+        updated_prefs['privacy_settings'] = preferences_data.privacy_settings
+
+    # Update user preferences
+    await user_service.update_preferences(str(current_user.id), updated_prefs)
+
+    # Return updated preferences
+    return DashboardUserPreferencesResponse(
+        favorite_cause=updated_prefs.get('favorite_cause', 'Programa General'),
+        communication_preferences=updated_prefs.get('communication_preferences', {
+            'email_notifications': True,
+            'sms_notifications': False,
+            'monthly_reports': True
+        }),
+        privacy_settings=updated_prefs.get('privacy_settings', {
+            'show_donations_publicly': False,
+            'allow_contact': True
+        })
+    )
 

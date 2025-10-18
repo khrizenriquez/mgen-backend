@@ -50,3 +50,46 @@ class UserListResponse(BaseModel):
 class DeleteResponse(BaseModel):
     """Schema for delete operation response"""
     message: str = Field(..., description="Success message")
+
+
+class UserProfileUpdate(BaseModel):
+    """Schema for updating user profile"""
+    first_name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's first name")
+    last_name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's last name")
+    phone: Optional[str] = Field(None, max_length=20, description="User's phone number")
+    address: Optional[str] = Field(None, max_length=255, description="User's address")
+
+
+class UserProfileResponse(BaseModel):
+    """Schema for user profile response"""
+    id: int = Field(..., description="User's unique identifier")
+    email: EmailStr = Field(..., description="User's email address")
+    first_name: Optional[str] = Field(None, description="User's first name")
+    last_name: Optional[str] = Field(None, description="User's last name")
+    phone: Optional[str] = Field(None, description="User's phone number")
+    address: Optional[str] = Field(None, description="User's address")
+    is_active: bool = Field(..., description="Whether the user is active")
+    created_at: datetime = Field(..., description="User creation timestamp")
+    updated_at: datetime = Field(..., description="User last update timestamp")
+
+    class Config:
+        from_attributes = True
+
+
+class ChangePasswordRequest(BaseModel):
+    """Schema for password change request"""
+    current_password: str = Field(..., min_length=1, description="Current password")
+    new_password: str = Field(..., min_length=8, description="New password (minimum 8 characters)")
+
+
+class UserPreferencesUpdate(BaseModel):
+    """Schema for updating user preferences"""
+    communication_preferences: Optional[dict] = Field(None, description="Communication preferences")
+    privacy_settings: Optional[dict] = Field(None, description="Privacy settings")
+
+
+class UserPreferencesResponse(BaseModel):
+    """Schema for user preferences response"""
+    favorite_cause: str = Field(..., description="User's favorite cause")
+    communication_preferences: dict = Field(..., description="Communication preferences")
+    privacy_settings: dict = Field(..., description="Privacy settings")

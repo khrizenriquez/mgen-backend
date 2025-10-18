@@ -55,3 +55,8 @@ class DonationStatsResponse(BaseModel):
     count_pending: int
     count_failed: int
     success_rate: float
+
+
+class DonationStatusUpdate(BaseModel):
+    """Schema for updating donation status"""
+    status_id: int  # 1=PENDING, 2=APPROVED, 3=DECLINED, 4=EXPIRED
