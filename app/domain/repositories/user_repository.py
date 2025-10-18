@@ -26,8 +26,8 @@ class UserRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Get all users with pagination"""
+    async def get_all(self, skip: int = 0, limit: int = 100, organization_id: Optional[str] = None) -> List[User]:
+        """Get all users with pagination and optional organization filtering"""
         pass
 
     @abstractmethod

@@ -80,6 +80,11 @@ class UserModel(Base):
     password_hash = Column(Text, nullable=False)
     email_verified = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    first_name = Column(Text, nullable=True)
+    last_name = Column(Text, nullable=True)
+    phone = Column(Text, nullable=True)
+    address = Column(Text, nullable=True)
+    preferences = Column(JSON, nullable=True, default=dict)  # User preferences as JSON
     organization_id = Column(CustomUUID(as_uuid=True), ForeignKey('organization.id'), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -55,11 +55,13 @@ else:
     print("📊 Apitally not configured (optional)")
 
 from app.adapters.controllers.admin_seed_controller import router as admin_seed_router
+from app.adapters.controllers.admin_controller import router as admin_router
 from app.adapters.controllers.auth_controller import router as auth_router
 from app.adapters.controllers.debug_auth_controller import router as debug_auth_router
 from app.adapters.controllers.dashboard_controller import router as dashboard_router
 from app.adapters.controllers.donation_controller import router as donation_router
 from app.adapters.controllers.health_controller import router as health_router
+from app.adapters.controllers.notifications_controller import router as notifications_router
 from app.adapters.controllers.organization_controller import router as organization_router
 from app.adapters.controllers.user_controller import router as user_router
 from app.infrastructure.database.database import engine, Base
@@ -229,6 +231,10 @@ try:
     app.include_router(admin_seed_router, prefix="/api/v1", tags=["admin"])
     logger.info("Admin seed router included")
 
+    logger.info("Including admin router...")
+    app.include_router(admin_router, prefix="/api/v1", tags=["admin"])
+    logger.info("Admin router included")
+
     logger.info("Including debug auth router...")
     app.include_router(debug_auth_router, prefix="/api/v1", tags=["debug"])
     logger.info("Debug auth router included")
@@ -248,6 +254,10 @@ try:
     logger.info("Including donation router...")
     app.include_router(donation_router, prefix="/api/v1", tags=["donations"])
     logger.info("Donation router included")
+
+    logger.info("Including notifications router...")
+    app.include_router(notifications_router, prefix="/api/v1", tags=["notifications"])
+    logger.info("Notifications router included")
 
     logger.info("Including user router...")
     app.include_router(user_router, prefix="/api/v1", tags=["users"])
