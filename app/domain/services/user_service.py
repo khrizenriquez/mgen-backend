@@ -43,11 +43,11 @@ class UserService:
             )
         return user
 
-    async def get_users(self, skip: int = 0, limit: int = 100) -> List[User]:
-        """Get all users with pagination"""
+    async def get_users(self, skip: int = 0, limit: int = 100, organization_id: Optional[str] = None) -> List[User]:
+        """Get all users with pagination and optional organization filtering"""
         if limit > 100:
             limit = 100  # Max limit
-        return await self.user_repository.get_all(skip=skip, limit=limit)
+        return await self.user_repository.get_all(skip=skip, limit=limit, organization_id=organization_id)
 
     async def update_user(self, user_id: int, user: User) -> User:
         """Update user"""

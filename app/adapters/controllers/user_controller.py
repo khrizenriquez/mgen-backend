@@ -64,7 +64,7 @@ async def create_user(
 
 @router.get("/", response_model=UserListResponse)
 async def get_users(
-    current_user = Depends(require_role("ORGANIZATION")),
+    current_user = Depends(require_any_role(["ADMIN", "ORGANIZATION"])),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
     user_service: UserService = Depends(get_user_service)
@@ -73,12 +73,20 @@ async def get_users(
     Get users with pagination (Admin/Organization only)
 
     - ADMIN: See all users in the system
-    - ORGANIZATION: See users in their organization (TODO: implement organization filtering)
+    - ORGANIZATION: See users in their organization
 
     - **skip**: Number of records to skip (default: 0)
     - **limit**: Maximum number of records to return (default: 10, max: 100)
     """
-    users = await user_service.get_users(skip=skip, limit=limit)
+    # Get user's roles
+    user_roles = [role.name for role in current_user.user_roles]
+
+    # If user is ORGANIZATION, filter by their organization
+    organization_id = None
+    if "ORGANIZATION" in user_roles and current_user.organization_id:
+        organization_id = str(current_user.organization_id)
+
+    users = await user_service.get_users(skip=skip, limit=limit, organization_id=organization_id)
     # Convert to UserInfo format for consistency with auth endpoints
     user_infos = []
     for user in users:
