@@ -11,7 +11,7 @@ from app.adapters.schemas.auth_schemas import GenericResponse
 from app.domain.services.user_service import UserService
 from app.domain.services.donation_service import DonationService
 from app.infrastructure.database.user_repository_impl import UserRepositoryImpl
-from app.infrastructure.database.donation_repository_impl import DonationRepositoryImpl
+from app.infrastructure.database.repository_impl import SQLAlchemyDonationRepository
 from app.infrastructure.database.database import get_db
 from app.infrastructure.auth.dependencies import require_admin
 from app.infrastructure.logging import get_logger
@@ -33,7 +33,7 @@ def get_user_service(db: Session = Depends(get_db)) -> UserService:
 
 def get_donation_service(db: Session = Depends(get_db)) -> DonationService:
     """Dependency to get donation service"""
-    donation_repository = DonationRepositoryImpl(db)
+    donation_repository = SQLAlchemyDonationRepository(db)
     return DonationService(donation_repository)
 
 

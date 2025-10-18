@@ -17,7 +17,6 @@ from app.adapters.schemas.user_schemas import (
     UserPreferencesUpdate,
     UserPreferencesResponse
 )
-from app.adapters.schemas.dashboard_schemas import UserPreferencesResponse as DashboardUserPreferencesResponse
 from app.adapters.schemas.auth_schemas import UserInfo
 from app.domain.entities.user import User
 from app.domain.services.user_service import UserService
@@ -286,7 +285,7 @@ async def change_password(
     return result
 
 
-@router.get("/preferences", response_model=DashboardUserPreferencesResponse)
+@router.get("/preferences", response_model=UserPreferencesResponse)
 async def get_user_preferences(
     current_user = Depends(get_current_active_user),
     user_service: UserService = Depends(get_user_service)
@@ -310,14 +309,14 @@ async def get_user_preferences(
         'allow_contact': True
     })
 
-    return DashboardUserPreferencesResponse(
+    return UserPreferencesResponse(
         favorite_cause=preferences.get('favorite_cause', 'Programa General'),
         communication_preferences=communication_prefs,
         privacy_settings=privacy_settings
     )
 
 
-@router.put("/preferences", response_model=DashboardUserPreferencesResponse)
+@router.put("/preferences", response_model=UserPreferencesResponse)
 async def update_user_preferences(
     preferences_data: UserPreferencesUpdate,
     current_user = Depends(get_current_active_user),
@@ -345,7 +344,7 @@ async def update_user_preferences(
     await user_service.update_preferences(str(current_user.id), updated_prefs)
 
     # Return updated preferences
-    return DashboardUserPreferencesResponse(
+    return UserPreferencesResponse(
         favorite_cause=updated_prefs.get('favorite_cause', 'Programa General'),
         communication_preferences=updated_prefs.get('communication_preferences', {
             'email_notifications': True,

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from app.domain.entities.user import User
 from app.domain.repositories.user_repository import UserRepository
-from app.infrastructure.auth.security import verify_password, get_password_hash
+from app.infrastructure.auth.jwt_utils import verify_password, get_password_hash
 
 
 class UserService:
