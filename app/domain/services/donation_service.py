@@ -153,3 +153,33 @@ class DonationService:
         Get all donations for a specific donor
         """
         return await self.donation_repository.get_by_email(email.strip().lower())
+
+    async def update_donation_status(self, donation_id: int, status_id: int) -> bool:
+        """
+        Update donation status by admin
+        """
+        logger.info(f"Updating donation {donation_id} status to {status_id}")
+
+        donation = await self.donation_repository.get_by_id(donation_id)
+        if not donation:
+            return False
+
+        # Update status based on status_id
+        # 1 = PENDING, 2 = APPROVED, 3 = DECLINED, 4 = EXPIRED
+        if status_id == 1:
+            donation.status = DonationStatus.PENDING
+        elif status_id == 2:
+            donation.status = DonationStatus.APPROVED
+            if not donation.paid_at:
+                from datetime import datetime
+                donation.paid_at = datetime.utcnow()
+        elif status_id == 3:
+            donation.status = DonationStatus.DECLINED
+        elif status_id == 4:
+            donation.status = DonationStatus.EXPIRED
+        else:
+            raise ValueError(f"Invalid status_id: {status_id}")
+
+        await self.donation_repository.update(donation)
+        logger.info(f"Donation {donation_id} status updated to {status_id}")
+        return True
