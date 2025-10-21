@@ -63,6 +63,7 @@ from app.adapters.controllers.donation_controller import router as donation_rout
 from app.adapters.controllers.health_controller import router as health_router
 from app.adapters.controllers.notifications_controller import router as notifications_router
 from app.adapters.controllers.organization_controller import router as organization_router
+from app.adapters.controllers.payu_controller import router as payu_router
 from app.adapters.controllers.user_controller import router as user_router
 from app.infrastructure.database.database import engine, Base
 from app.infrastructure.database.seeders import run_seeders
@@ -258,6 +259,10 @@ try:
     logger.info("Including notifications router...")
     app.include_router(notifications_router, prefix="/api/v1", tags=["notifications"])
     logger.info("Notifications router included")
+
+    logger.info("Including PayU router...")
+    app.include_router(payu_router, prefix="/api/v1", tags=["payments"])
+    logger.info("PayU router included")
 
     logger.info("Including user router...")
     app.include_router(user_router, prefix="/api/v1", tags=["users"])

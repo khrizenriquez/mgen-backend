@@ -183,3 +183,11 @@ class SQLAlchemyDonationRepository(DonationRepository):
         return self.db.query(DonationModel).filter(
             DonationModel.status_id == status.value
         ).count()
+
+    async def get_by_reference_code(self, reference_code: str) -> Optional[Donation]:
+        """Get donation by reference code"""
+        model = self.db.query(DonationModel).filter(
+            DonationModel.reference_code == reference_code
+        ).first()
+
+        return self._model_to_entity(model) if model else None
