@@ -170,3 +170,45 @@ class TestAuthController:
 
         # This will fail due to missing auth, but shows the endpoint exists
         assert response.status_code in [200, 401, 403]  # Depends on auth setup
+
+    def test_get_current_user_info_with_names(self, test_app):
+        """Test /auth/me endpoint returns user info including first_name and last_name"""
+        from app.infrastructure.auth.dependencies import get_current_active_user
+        
+        # Create mock user with all required fields
+        mock_user = Mock()
+        mock_user.id = "user-123"
+        mock_user.email = "test@example.com"
+        mock_user.first_name = "Juan"
+        mock_user.last_name = "Pérez"
+        mock_user.email_verified = True
+        mock_user.is_active = True
+        mock_user.created_at.isoformat.return_value = "2024-01-01T00:00:00"
+        mock_user.updated_at.isoformat.return_value = "2024-01-01T00:00:00"
+        
+        # Mock user_roles relationship
+        mock_role = Mock()
+        mock_role.name = "USER"
+        mock_user_role = Mock()
+        mock_user_role.role = mock_role
+        mock_user.user_roles = [mock_user_role]
+        
+        # Override the dependency
+        test_app.dependency_overrides[get_current_active_user] = lambda: mock_user
+        
+        client = TestClient(test_app)
+        response = client.get("/auth/me")
+        
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Verify all required fields are present
+        assert data["id"] == "user-123"
+        assert data["email"] == "test@example.com"
+        assert data["first_name"] == "Juan"
+        assert data["last_name"] == "Pérez"
+        assert data["email_verified"] is True
+        assert data["is_active"] is True
+        assert "USER" in data["roles"]
+        assert "created_at" in data
+        assert "updated_at" in data
