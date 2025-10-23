@@ -291,6 +291,8 @@ async def get_current_user_info(
         return {
             "id": str(current_user.id),
             "email": current_user.email,
+            "first_name": current_user.first_name,
+            "last_name": current_user.last_name,
             "email_verified": current_user.email_verified,
             "is_active": current_user.is_active,
             "roles": roles,

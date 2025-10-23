@@ -108,7 +108,9 @@ def setup_logging() -> None:
     """Setup logging configuration for the entire application"""
     
     # Get log level from environment
-    log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+    log_level = os.getenv('LOG_LEVEL', 'INFO').strip().upper()
+    if not log_level or log_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
+        log_level = 'INFO'
     
     # Configure structlog first
     configure_structlog()
@@ -118,25 +120,14 @@ def setup_logging() -> None:
         'version': 1,
         'disable_existing_loggers': False,
         'formatters': {
-            'json': {
-                '()': CustomJSONFormatter,
-                'format': '%(timestamp)s %(level)s %(service)s %(env)s %(version)s %(logger)s %(request_id)s %(message)s'
-            },
             'simple': {
                 'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            }
-        },
-        'filters': {
-            'correlation': {
-                '()': CorrelationFilter,
             }
         },
         'handlers': {
             'stdout': {
                 'class': 'logging.StreamHandler',
-                'stream': sys.stdout,
-                'formatter': 'json' if os.getenv('ENVIRONMENT', 'development') != 'development' else 'simple',
-                'filters': ['correlation'],
+                'formatter': 'simple',
                 'level': log_level,
             }
         },
@@ -175,7 +166,16 @@ def setup_logging() -> None:
     }
     
     # Apply configuration
-    logging.config.dictConfig(config)
+    try:
+        logging.config.dictConfig(config)
+    except Exception as e:
+        # Fallback to basic configuration if dictConfig fails
+        logging.basicConfig(
+            level=getattr(logging, log_level),
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[logging.StreamHandler(sys.stdout)]
+        )
+        print(f"Warning: Could not configure logging via dictConfig: {e}")
     
     # Set root logger level
     logging.getLogger().setLevel(getattr(logging, log_level))
